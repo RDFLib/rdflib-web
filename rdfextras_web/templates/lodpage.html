@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}{{label}} @ RDFLib LOD Server{% endblock %}
+
+ {% block body %}
+<h1>
+
+  {{label}}
+{% if picked %}
+<a href="{{url_for('pick', uri=resource)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
+{% else %}
+<a href="{{url_for('pick', uri=resource)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
+{% endif %}
+
+  <span class='url'>{{resource}}</span>
+</h1>
+is-a 
+<span id="typelist">	
+	{% for t in types %}
+	<a href='{{t.url}}'>{{t.label}}</a>
+	{% if not loop.last %}, {% endif %}
+	{% endfor %}
+</span>
+
+{% block special %}{% endblock %}
+{% if outprops %}
+<h2>Properties:</h2>
+<table>
+<thead>
+  <tr><td>property</td><td>value</td></tr>
+</thead>
+{% for p,v in outprops %}
+<tr class="{{ loop.cycle('odd', 'even') }}">
+  <td><a href='{{p.url}}'>{{p.label}}</a></td>
+	{% if v.url %}
+  <td><a href='{{v.url}}'>{{v.label}}</a></td>
+	{% else %}
+	<td>"{{v.label}}"
+	{% if v.lang %} <i>({{v.lang}})</i> {% endif %}
+	{% endif %}
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+{% if inprops %}
+<h2>Incoming Properties:</h2>
+<table>
+<thead>
+  <tr><td>node</td><td>property</td></tr>
+</thead>
+{% for v,p in inprops %}
+<tr class="{{ loop.cycle('odd', 'even') }}">
+	<td><a href='{{v.url}}'>{{v.label}}</a></td>
+	{% if p.url %}
+  <td><a href='{{p.url}}'>{{p.label}}</a></td>
+	{% else %}
+	<td>{{p.label}}
+	{% endif %}
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+<hr/>
+<div id="footer">
+	<a href='/'>back to index</a> - 
+	<a href="{{url_for('picked')}}"><img src="{{url_for('static', filename='star_active.png')}}" /> resources</a> - 	
+Download as: 
+{% if type_ %}
+<a href="{{url_for('data', type_=type_, label=urilabel, format_='nt') }}">ntriples</a> |
+<a href="{{url_for('data', type_=type_, label=urilabel, format_='turtle') }}">turtle</a> |
+<a href="{{url_for('data', type_=type_, label=urilabel, format_='xml') }}">rdf/xml</a> | 
+<a href="{{url_for('data', type_=type_, label=urilabel, format_='json') }}">json-ld</a>
+Graph:
+<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='png') }}">png</a> | 
+<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='pdf') }}">pdf</a> | 
+<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='svg') }}">svg</a> | 
+<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='dot') }}">dot</a> 
+
+{% else %}         
+
+<a href="{{url_for('data', label=urilabel, format_='nt') }}">ntriples</a> |
+<a href="{{url_for('data', label=urilabel, format_='n3') }}">n3</a> |
+<a href="{{url_for('data', label=urilabel, format_='xml') }}">rdf/xml</a> |
+<a href="{{url_for('data', label=urilabel, format_='json') }}">json-ld</a>
+| 
+Graph:
+<a href="{{url_for('rdfgraph', label=urilabel, format_='png') }}">png</a> | 
+<a href="{{url_for('rdfgraph', label=urilabel, format_='pdf') }}">pdf</a> | 
+<a href="{{url_for('rdfgraph', label=urilabel, format_='svg') }}">svg</a> | 
+<a href="{{url_for('rdfgraph', label=urilabel, format_='dot') }}">dot</a> 
+
+{% endif %}
+</div>
+
+{% endblock %}

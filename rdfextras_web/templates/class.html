@@ -1,0 +1,14 @@
+{% extends "classes.html" %}
+
+{% block special %}
+{{super()}}
+{% if instances %}
+<h2>Instances</h2>
+<ul>
+{% for x in instances %}
+<li><a href="{{x.url}}">{{x.label}}</a>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}

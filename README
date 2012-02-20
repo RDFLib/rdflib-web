@@ -1,0 +1,9 @@
+
+
+ * Two web-apps on top of the Flask web-microframework:
+   * a SPARQL endpoint app implementing the SPARQL 1.0 Protocol
+   * a Linked Open Data app for publishing resources as HTML pages
+
+ * For the Web-apps: Flask, http://flask.pocoo.org/
+  * (which in turn requires Jinja2 and Werkzeug)
+  * For correct content-negotiation: mimeparse (fallback without conneg)
