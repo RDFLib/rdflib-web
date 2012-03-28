@@ -12,11 +12,11 @@ bookrdf="""
     dc:title "Harry Potter and the Philosopher\'s Stone" .
 
 <http://example.org/book/book2> a book:Book ;
-    dc:creator _:RDhmeZZC15;
+    dc:creator <http://example.org/book/MrsRowling> ;
     dc:title "Harry Potter & the Chamber of Secrets" .
 
 <http://example.org/book/book3> a book:Book ;
-    dc:creator _:RDhmeZZC15;
+    dc:creator <http://example.org/book/MrsRowling>;
     dc:title "Harry Potter and the Prisoner Of Azkaban" .
 
 <http://example.org/book/book4> dc:title "Harry Potter and the Goblet of Fire" .
@@ -38,13 +38,12 @@ bookrdf="""
     dc:title "Moose bite can b\xc3\xb6 very nasty."@se ; 
     dc:title "Elgbitt kan v\xc3\xa6re veldig vondt."@no ; .
 
-_:RDhmeZZC16 vcard:Family "Rowling";
+<http://example.org/book/MrsRowling> a book:Person ; 
+    vcard:Family "Rowling";
     vcard:Given "Joanna" .
 
-_:RDhmeZZC15 vcard:FN "J.K. Rowling";
-    vcard:N _:RDhmeZZC16 .
 
 """
 
 bookdb=rdflib.Graph()
-bookdb.load(StringIO.StringIO(bookrdf),format='n3')
+bookdb.parse(data=bookrdf,format='n3')

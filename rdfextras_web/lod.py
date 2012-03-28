@@ -16,13 +16,15 @@ and servers content-negotiated HTML or serialised RDF from these.
 
 """
 import re
-import rdflib
 import warnings
 import urllib2
 import collections
 import subprocess
 import codecs 
 import os.path
+import itertools
+
+import rdflib
 
 from flask import render_template, request, make_response, redirect, url_for, g, Response, abort, session
 
@@ -87,7 +89,8 @@ def resolve(r):
     else:
         for t in g.graph.objects(r,rdflib.RDF.type):
             if t in lod.config["types"]: 
-                localurl=url_for("resource", type_=lod.config["types"][t], label=lod.config["resources"][t][r])
+                l=lod.config["resources"][t][r].decode("utf8")
+                localurl=url_for("resource", type_=lod.config["types"][t], label=l)                
                 break
     url=r
     if localurl: url=localurl
@@ -178,7 +181,8 @@ def reverse_resources(resources):
 def _quote(l): 
     if isinstance(l,unicode): 
         l=l.encode("utf-8")
-    return urllib2.quote(l, safe="")
+    return l
+    #return urllib2.quote(l, safe="")
         
 
 def get_resource(label, type_): 
@@ -207,6 +211,9 @@ def rdfgraph(label, format_,type_=None):
     graph+=g.graph.triples((r,None,None))
     graph+=g.graph.triples((None,None,r))
 
+    if lod.config["add_types_labels"]:
+        addTypesLabels(graph, g.graph)
+
     return graphrdf(graph, format_)
 
 def graphrdf(graph, format_):
@@ -234,6 +241,17 @@ def dot(inputgraph, format_):
     return Response(readres(), mimetype=GRAPH_TYPES[format_])
     
 
+def addTypesLabels(subgraph, graph): 
+    addMe=[]
+    for o in itertools.chain(subgraph.objects(None,None),subgraph.subjects(None,None)):
+        if not isinstance(o, rdflib.term.Node): continue
+        addMe+=list(graph.triples((o,rdflib.RDF.type, None)))
+        for l in lod.config["label_properties"]:
+            if (o, l, None) in graph:
+                addMe+=list(graph.triples((o, l, None)))
+                break
+    subgraph+=addMe
+
 
 @lod.route("/data/<type_>/<rdf:label>.<format_>")
 @lod.route("/data/<rdf:label>.<format_>")
@@ -250,9 +268,12 @@ def data(label, format_, type_=None):
     graph+=g.graph.triples((r,None,None))
     graph+=g.graph.triples((None,None,r))
 
+    if lod.config["add_types_labels"]:
+        addTypesLabels(graph, g.graph)
+
     return serialize(graph, format_)
 
-def serialize(graph, format_):
+def serialize(graph, format_):    
 
     format_,mimetype_=mimeutils.format_to_mime(format_)
 
@@ -329,7 +350,7 @@ def resource(label, type_=None):
     """
     
     mimetype=mimeutils.best_match([mimeutils.RDFXML_MIME, mimeutils.N3_MIME, 
-        mimeutils.NTRIPLES_MIME, mimeutils.HTML_MIME], request.headers["Accept"])
+        mimeutils.NTRIPLES_MIME, mimeutils.HTML_MIME], request.headers.get("Accept"))
         
     if mimetype and mimetype!=mimeutils.HTML_MIME:
         path="data"
@@ -337,8 +358,7 @@ def resource(label, type_=None):
     else:
         path="page"
         ext=""
-        
-    #print "label", label
+    
     if type_:
         if ext!='' :
             url=url_for(path, type_=type_, label=label, format_=ext)
@@ -390,8 +410,14 @@ def picked(action=None, format_=None):
         graph=rdflib.Graph()
         for x in session["picked"]:
             graph+=g.graph.triples((x,None,None))
-            graph+=g.graph.triples((None,None,x))
+            graph+=g.graph.triples((None,None,x))    
+
+        if lod.config["add_types_labels"]:
+            addTypesLabels(graph, g.graph)
+
         return graph
+
+
 
     if action=='download': 
         return serialize(pickedgraph(), format_)
@@ -408,6 +434,11 @@ def picked(action=None, format_=None):
         return render_template("picked.html",
                                things=things)
 
+    
+
+        
+
+    
 ##################
 
 def serve(graph_,debug=False):
@@ -418,7 +449,8 @@ def serve(graph_,debug=False):
 
 def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"], 
         label_properties=LABEL_PROPERTIES, 
-        hierarchy_properties=[ rdflib.RDFS.subClassOf, rdflib.RDFS.subPropertyOf ] ):
+        hierarchy_properties=[ rdflib.RDFS.subClassOf, rdflib.RDFS.subPropertyOf ],
+        add_types_labels=True):
 
     """
     Get the LOD Flask App setup to serve the given graph
@@ -427,6 +459,7 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
     lod.config["graph"]=graph
     lod.config["label_properties"]=label_properties
     lod.config["hierarchy_properties"]=hierarchy_properties
+    lod.config["add_types_labels"]=add_types_labels
     
     if types=='auto':
         lod.config["types"]=detect_types(graph)
@@ -441,9 +474,12 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
     lod.config["rresources"]=reverse_resources(lod.config["resources"])
 
     lod.secret_key='veryverysecret'
-    
-    return lod
 
+
+    
+    return lod    
+    
+    
     
 
 def _main(g, out, opts): 

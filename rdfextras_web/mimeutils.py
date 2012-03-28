@@ -41,6 +41,6 @@ def resultformat_to_mime(format):
     return "text/plain"
     
 def best_match(cand, header): 
-    if mimeparse:
+    if mimeparse and header:
         return mimeparse.best_match(cand,header)
     return None
