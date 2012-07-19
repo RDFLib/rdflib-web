@@ -6,6 +6,7 @@ import warnings
 
 from jinja2 import Environment, contextfilter, Markup
 
+
 @contextfilter
 def term_to_string(ctx, t): 
     if isinstance(t, rdflib.URIRef):

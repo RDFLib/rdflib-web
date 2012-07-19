@@ -33,6 +33,18 @@ h1 .url {
 
 h1 img { height: 24px; }
 
+.comment { 
+    padding: 5px; 
+    padding-left: 10px;
+    color: #555;
+    background: #fafafa; 
+    border: 1px solid #eee;
+    margin-left: 10px; 
+    margin-right: auto;
+    margin-top: 10px;
+    width: 650px;
+}
+
 #versions { 
     font-size: 0.7em;
 }
