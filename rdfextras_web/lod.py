@@ -490,9 +490,9 @@ def picked(action=None, format_=None):
     else:
         if action=='all':
             for t in lod.config["resources"]:
-                session["picked"].update(lod.config["resources"][t])
+                session["picked"]|=set(lod.config["resources"][t])
 
-        things=[resolve(x) for x in session["picked"]]
+        things=sorted([resolve(x) for x in session["picked"]])
         return render_template("picked.html",
                                things=things)
     
