@@ -530,10 +530,10 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
     lod.config["resources"]=find_resources(graph)
     lod.config["rresources"]=reverse_resources(lod.config["resources"])
 
+    # make sure we get one session per app
+    lod.config["SESSION_COOKIE_NAME"]="SESSION_"+re.sub('[^a-zA-Z0-9_]','_', str(graph.identifier))
     lod.secret_key='veryverysecret'+str(graph.identifier)
-
-
-    
+   
     return lod    
     
     
