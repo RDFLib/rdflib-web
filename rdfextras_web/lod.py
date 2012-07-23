@@ -501,7 +501,7 @@ def _main(g, out, opts):
 
 def main(): 
     from rdfextras.utils.cmdlineutils import main as cmdmain
-    cmdmain(_main, options='t:nd')
+    cmdmain(_main, options='t:nd', stdin=False)
 
 if __name__=='__main__':
     main()

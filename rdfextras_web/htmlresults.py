@@ -46,6 +46,7 @@ GRAPH_TEMPLATE=u"""
  {% endfor %}
 </tbody>
 </table>
+
 """
 
 SELECT_TEMPLATE=u"""
@@ -101,6 +102,10 @@ class HTMLSerializer(Serializer):
             warnings.warn("HTMLSerializer does not use custom encoding.")
 
         template = env.from_string(GRAPH_TEMPLATE)
-        stream.write(template.render(graph=self.store))
+        res=template.render(graph=self.store)
+        if not encoding: encoding="utf-8"
+        
+        res=res.encode(encoding)
+        stream.write(res)
 
 
