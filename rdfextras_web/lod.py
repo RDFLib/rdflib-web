@@ -530,7 +530,7 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
     lod.config["resources"]=find_resources(graph)
     lod.config["rresources"]=reverse_resources(lod.config["resources"])
 
-    lod.secret_key='veryverysecret'
+    lod.secret_key='veryverysecret'+str(graph.identifier)
 
 
     
