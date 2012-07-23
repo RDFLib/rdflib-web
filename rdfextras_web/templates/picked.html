@@ -16,7 +16,7 @@ Click the stars in the list below to deselect individual resources.
 <a href="{{url_for('pick', uri=r.realurl)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
 
 
-<a href='{{r.url}}'>{{r.label}}</a></li>
+{{r|term}}</li>
 {% endfor %}
 {% else %}
 <li>Nothing picked</li>

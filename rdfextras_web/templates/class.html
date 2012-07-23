@@ -2,11 +2,56 @@
 
 {% block special %}
 {{super()}}
+
+{% if classinprops or classoutprops%} 
+<h2>Class Properties</h2>
+{% if classoutprops %}
+<h3>&rArr; properties</h3>
+<table>
+<thead>
+  <tr><td></td><td>property</td><td>range</td></tr>
+</thead>
+{% for p,r in classoutprops %}
+<tr class="{{ loop.cycle('odd', 'even') }}">
+  {% if loop.first %}<td rowspan='{{classoutprops|count}}'>{{label}}</td>{% endif %}
+  <td>{{p|term}}</td>
+  <td>{{r|term|join(", ")}}</td>
+</tr>
+
+{% endfor %}
+</table>
+<br/>
+{% endif %}
+
+
+{% if classinprops %}
+<h3>&lArr; properties</h3>
+<table>
+<thead>
+  <tr><td>domain</td><td>property</td><td></td></tr>
+</thead>
+{% for d,p in classinprops %}
+<tr class="{{ loop.cycle('odd', 'even') }}">
+  <td>{{d|term|join(", ")}}</td>
+  <td>{{p|term}}</td>
+  {% if loop.first %}<td rowspan='{{classinprops|count}}'>{{label}}</td>{% endif %}
+
+</tr>
+{% endfor %}
+
+
+
+</table>
+{% endif %}
+
+
+{% endif %}
+
 {% if instances %}
 <h2>Instances</h2>
 <ul>
 {% for x in instances %}
-<li><a href="{{x.url}}">{{x.label}}</a>
+<li>{{x|term}}</li>
 {% endfor %}
 </ul>
 {% endif %}

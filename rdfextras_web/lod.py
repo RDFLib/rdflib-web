@@ -31,6 +31,7 @@ from flask import render_template, request, make_response, redirect, url_for, g,
 from werkzeug.routing import BaseConverter
 from werkzeug.urls import url_quote
 
+from jinja2 import contextfilter, Markup
 
 from rdfextras_web.endpoint import endpoint as lod
 from rdfextras_web import mimeutils
@@ -58,8 +59,16 @@ class RDFUrlConverter(BaseConverter):
     def to_url(self, value):
         return url_quote(value, self.map.charset, safe=":")
 
+@contextfilter
+def termdict_link(ctx, t): 
+    if not t: return ""
+    if isinstance(t,dict): 
+        return Markup("<a href='%s'>%s</a>")%(t['url'], t['label'])
+    else: 
+        return [termdict_link(ctx,x) for x in t]
+
 lod.url_map.converters['rdf'] = RDFUrlConverter
-lod.jinja_env.filters["term_to_string"]=term_to_string
+lod.jinja_env.filters["term"]=termdict_link
 
 LABEL_PROPERTIES=[rdflib.RDFS.label, 
                   rdflib.URIRef("http://purl.org/dc/elements/1.1/title"), 
@@ -291,23 +300,33 @@ def page(label, type_=None):
     if isinstance(r,tuple): # 404
         return r
 
-    outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0]!=rdflib.RDF.type])
+    special_props=(rdflib.RDF.type, rdflib.RDFS.comment, 
+                   rdflib.RDFS.domain, rdflib.RDFS.range )
+
+    outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props])
     
     types=sorted([ resolve(x) for x in g.graph.objects(r,rdflib.RDF.type)])
+    domain=sorted([ resolve(x) for x in g.graph.objects(r,rdflib.RDFS.domain)])
+    range=sorted([ resolve(x) for x in g.graph.objects(r,rdflib.RDFS.range)])
+
+    comments=list(g.graph.objects(r,rdflib.RDFS.comment))
     
     inprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ])
 
     picked=r in session["picked"]
 
     params={ "outprops":outprops, 
-        "inprops":inprops, 
-        "label":get_label(r),
-        "urilabel":label,
-        "graph":g.graph,
-        "type_":type_, 
-        "types":types,
-        "resource":r, 
-        "picked":picked }
+             "inprops":inprops, 
+             "label":get_label(r),
+             "urilabel":label,
+             "comments":comments,
+             "graph":g.graph,
+             "domain": domain,
+             "range": range,
+             "type_":type_, 
+             "types":types,
+             "resource":r, 
+             "picked":picked }
     p="lodpage.html"
         
     if r==rdflib.RDFS.Class or r==rdflib.OWL.Class: 
@@ -328,15 +347,21 @@ def page(label, type_=None):
         superClass=g.graph.value(r,rdflib.RDFS.subClassOf)
         if superClass: 
             params["classes"]=[(resolve(superClass), params["classes"])]
-            
+
+        params["classoutprops"]=[(resolve(p), [resolve(pr) for pr in g.graph.objects(p,rdflib.RDFS.range)]) for p in g.graph.subjects(rdflib.RDFS.domain,r)]
+        params["classinprops"]=[([resolve(pr) for pr in g.graph.objects(p,rdflib.RDFS.domain)],resolve(p)) for p in g.graph.subjects(rdflib.RDFS.range,r)]
+    
         params["instances"]=[]
         # show subclasses/instances only once
         for x in inprops[:]: 
             if x[1]["url"]==rdflib.RDF.type:
                 inprops.remove(x)
                 params["instances"].append(x[0])
-            elif x[1]["url"]==rdflib.RDFS.subClassOf: 
+            elif x[1]["url"] in (rdflib.RDFS.subClassOf, 
+                                 rdflib.RDFS.domain, 
+                                 rdflib.RDFS.range): 
                 inprops.remove(x)
+
         p="class.html"
 
     return render_template(p, **params)

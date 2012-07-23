@@ -10,7 +10,7 @@
 {% if resource==node.realurl %}
 <li><a href="{{node.url}}"><strong>{{node.label}}</strong></a>
 {% else %}
-<li><a href="{{node.url}}">{{node.label}}</a>
+<li>{{node|term}}</a>
 {% endif %}
 {% if children %}
 <ul>

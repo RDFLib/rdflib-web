@@ -30,7 +30,7 @@
 <h3><a name="type{{loop.index0}}"><a href='{{t.url}}'>{{t.label}} ({{t.count}})</a></a></h3>
 <ul>
 {% for r in resources[t.realurl] %}
-<li><a href="{{r.url}}">{{r.label}}</a></li>
+<li>{{r|term}}</li>
 {% endfor %}
 </ul>
 {% endfor %}
@@ -38,7 +38,7 @@
 
 <ul>
 {% for r in resources[None] %}
-<li><a href="{{r.url}}">{{r.label}}</a></li>
+<li>{{r|term}}</li>
 {% endfor %}
 </ul>
 
