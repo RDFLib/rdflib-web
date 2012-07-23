@@ -2,11 +2,11 @@
 
 {% block special %}
 
-{% if classes %}
-<h2>Class Hierarchy</h2>
+{% if properties %}
+<h2>Property Hierarchy</h2>
 
 {% import 'utils.html' as utils %}
-{{ utils.tree(classes) }}
+{{ utils.tree(properties) }}
 
 {% endif %}
 

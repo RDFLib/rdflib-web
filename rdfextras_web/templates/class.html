@@ -15,7 +15,7 @@
 <tr class="{{ loop.cycle('odd', 'even') }}">
   {% if loop.first %}<td rowspan='{{classoutprops|count}}'>{{label}}</td>{% endif %}
   <td>{{p|term}}</td>
-  <td>{{r|term|join(", ")}}</td>
+  <td>{{r|term|join(", ") if r else "(any)"}}</td>
 </tr>
 
 {% endfor %}
@@ -32,7 +32,7 @@
 </thead>
 {% for d,p in classinprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">
-  <td>{{d|term|join(", ")}}</td>
+  <td>{{d|term|join(", ") if d else "(any)" }}</td>
   <td>{{p|term}}</td>
   {% if loop.first %}<td rowspan='{{classinprops|count}}'>{{label}}</td>{% endif %}
 

@@ -25,19 +25,19 @@ import os.path
 import itertools
 
 import rdflib
+from rdflib import RDF, RDFS
 
 from flask import render_template, request, make_response, redirect, url_for, g, Response, abort, session
 
 from werkzeug.routing import BaseConverter
 from werkzeug.urls import url_quote
 
-from jinja2 import contextfilter, Markup
+from jinja2 import contextfilter, contextfunction, Markup
 
 from rdfextras_web.endpoint import endpoint as lod
 from rdfextras_web import mimeutils
 from rdfextras.tools import rdf2dot, rdfs2dot
 from rdfextras.utils import graphutils
-from rdfextras_web.htmlresults import term_to_string
 
 
 POSSIBLE_DOT=["/usr/bin/dot", "/usr/local/bin/dot", "/opt/local/bin/dot"]
@@ -67,10 +67,15 @@ def termdict_link(ctx, t):
     else: 
         return [termdict_link(ctx,x) for x in t]
 
+
+def is_rdf_node(t): 
+    return isinstance(t, rdflib.term.Node)
+
 lod.url_map.converters['rdf'] = RDFUrlConverter
 lod.jinja_env.filters["term"]=termdict_link
+lod.jinja_env.tests["rdf_node"]=is_rdf_node
 
-LABEL_PROPERTIES=[rdflib.RDFS.label, 
+LABEL_PROPERTIES=[RDFS.label, 
                   rdflib.URIRef("http://purl.org/dc/elements/1.1/title"), 
                   rdflib.URIRef("http://xmlns.com/foaf/0.1/name"),
                   rdflib.URIRef("http://www.w3.org/2006/vcard/ns#fn"),
@@ -93,10 +98,10 @@ def resolve(r):
         
     localurl=None
     if lod.config["types"]=={None: None}:
-        if (r, rdflib.RDF.type, None) in g.graph:
+        if (r, RDF.type, None) in g.graph:
             localurl=url_for("resource", label=lod.config["resources"][None][r])
     else:
-        for t in g.graph.objects(r,rdflib.RDF.type):
+        for t in g.graph.objects(r,RDF.type):
             if t in lod.config["types"]: 
                 l=lod.config["resources"][t][r].decode("utf8")
                 localurl=url_for("resource", type_=lod.config["types"][t], label=l)                
@@ -133,14 +138,14 @@ def label_to_url(label):
 
 def detect_types(graph): 
     types={}
-    types[rdflib.RDFS.Class]=localname(rdflib.RDFS.Class)
-    types[rdflib.RDF.Property]=localname(rdflib.RDF.Property)
-    for t in set(graph.objects(None, rdflib.RDF.type)):
+    types[RDFS.Class]=localname(RDFS.Class)
+    types[RDF.Property]=localname(RDF.Property)
+    for t in set(graph.objects(None, RDF.type)):
         types[t]=localname(t)
 
     # make sure type triples are in graph
     for t in types: 
-        graph.add((t, rdflib.RDF.type, rdflib.RDFS.Class))
+        graph.add((t, RDF.type, RDFS.Class))
 
     return types
 
@@ -162,10 +167,10 @@ def find_resources(graph):
     
     for t in lod.config["types"]: 
         resources[t]={}
-        for x in graph.subjects(rdflib.RDF.type, t): 
+        for x in graph.subjects(RDF.type, t): 
             resources[t][x]=_quote(localname(x))
 
-    #resources[rdflib.RDFS.Class]=lod.config["types"].copy()
+    #resources[RDFS.Class]=lod.config["types"].copy()
 
     return resources
 
@@ -254,7 +259,7 @@ def addTypesLabels(subgraph, graph):
     addMe=[]
     for o in itertools.chain(subgraph.objects(None,None),subgraph.subjects(None,None)):
         if not isinstance(o, rdflib.term.Node): continue
-        addMe+=list(graph.triples((o,rdflib.RDF.type, None)))
+        addMe+=list(graph.triples((o,RDF.type, None)))
         for l in lod.config["label_properties"]:
             if (o, l, None) in graph:
                 addMe+=list(graph.triples((o, l, None)))
@@ -300,16 +305,15 @@ def page(label, type_=None):
     if isinstance(r,tuple): # 404
         return r
 
-    special_props=(rdflib.RDF.type, rdflib.RDFS.comment, 
-                   rdflib.RDFS.domain, rdflib.RDFS.range )
+    special_props=(RDF.type, RDFS.comment, RDFS.label,
+                   RDFS.domain, RDFS.range, 
+                   RDFS.subClassOf, RDFS.subPropertyOf)
 
     outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props])
     
-    types=sorted([ resolve(x) for x in g.graph.objects(r,rdflib.RDF.type)])
-    domain=sorted([ resolve(x) for x in g.graph.objects(r,rdflib.RDFS.domain)])
-    range=sorted([ resolve(x) for x in g.graph.objects(r,rdflib.RDFS.range)])
+    types=sorted([ resolve(x) for x in g.graph.objects(r,RDF.type)])
 
-    comments=list(g.graph.objects(r,rdflib.RDFS.comment))
+    comments=list(g.graph.objects(r,RDFS.comment))
     
     inprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ])
 
@@ -321,48 +325,77 @@ def page(label, type_=None):
              "urilabel":label,
              "comments":comments,
              "graph":g.graph,
-             "domain": domain,
-             "range": range,
              "type_":type_, 
              "types":types,
              "resource":r, 
              "picked":picked }
     p="lodpage.html"
         
-    if r==rdflib.RDFS.Class or r==rdflib.OWL.Class: 
+    if r==RDF.Property:
+        # page for all properties
+        roots=graphutils.find_roots(g.graph, RDFS.subPropertyOf, set(x for x in g.graph.subjects(RDF.type, r)))
+        params["properties"]=[graphutils.get_tree(g.graph, x, RDFS.subPropertyOf, resolve) for x in roots]
+        for x in inprops[:]: 
+            if x[1]["url"]==RDF.type:
+                inprops.remove(x)
+
+        
+        p="properties.html"
+    elif (r, RDF.type, RDF.Property) in g.graph: 
+        # a single property
+
+        params["properties"]=[graphutils.get_tree(g.graph, r, RDFS.subPropertyOf, resolve)]
+
+        superProp=[resolve(x) for x in g.graph.objects(r,RDFS.subPropertyOf) ]
+        if superProp: 
+            params["properties"]=[(superProp, params["properties"])]
+
+        params["domain"]=[resolve(do) for do in g.graph.objects(r,RDFS.domain)]
+        params["range"]=[resolve(ra) for ra in g.graph.objects(r,RDFS.range)]
+    
+        # show subclasses/instances only once
+        for x in inprops[:]: 
+            if x[1]["url"] in (RDFS.subPropertyOf, ): 
+                inprops.remove(x)
+
+        p="property.html"
+    elif r==RDFS.Class or r==rdflib.OWL.Class: 
         # page for all classes
-        roots=graphutils.find_roots(g.graph, rdflib.RDFS.subClassOf, set(lod.config["types"]))
-        params["classes"]=[graphutils.get_tree(g.graph, x, rdflib.RDFS.subClassOf, resolve) for x in roots]
+        roots=graphutils.find_roots(g.graph, RDFS.subClassOf, set(lod.config["types"]))
+        params["classes"]=[graphutils.get_tree(g.graph, x, RDFS.subClassOf, resolve) for x in roots]
         
         p="classes.html"
         # show classes only once
         for x in inprops[:]: 
-            if x[1]["url"]==rdflib.RDF.type:
+            if x[1]["url"]==RDF.type:
                 inprops.remove(x)
 
-    elif (r, rdflib.RDF.type, rdflib.RDFS.Class) in g.graph or (r, rdflib.RDF.type, rdflib.OWL.Class) in g.graph:
+    elif (r, RDF.type, RDFS.Class) in g.graph or (r, RDF.type, rdflib.OWL.Class) in g.graph:
         # page for a single class
         
-        params["classes"]=[graphutils.get_tree(g.graph, r, rdflib.RDFS.subClassOf, resolve)]
-        superClass=g.graph.value(r,rdflib.RDFS.subClassOf)
-        if superClass: 
-            params["classes"]=[(resolve(superClass), params["classes"])]
+        params["classes"]=[graphutils.get_tree(g.graph, r, RDFS.subClassOf, resolve)]
 
-        params["classoutprops"]=[(resolve(p), [resolve(pr) for pr in g.graph.objects(p,rdflib.RDFS.range)]) for p in g.graph.subjects(rdflib.RDFS.domain,r)]
-        params["classinprops"]=[([resolve(pr) for pr in g.graph.objects(p,rdflib.RDFS.domain)],resolve(p)) for p in g.graph.subjects(rdflib.RDFS.range,r)]
+        superClass=[resolve(x) for x in g.graph.objects(r,RDFS.subClassOf) ]
+        if superClass: 
+            params["classes"]=[(superClass, params["classes"])]
+
+        params["classoutprops"]=[(resolve(p), [resolve(pr) for pr in g.graph.objects(p,RDFS.range)]) for p in g.graph.subjects(RDFS.domain,r)]
+        params["classinprops"]=[([resolve(pr) for pr in g.graph.objects(p,RDFS.domain)],resolve(p)) for p in g.graph.subjects(RDFS.range,r)]
     
         params["instances"]=[]
         # show subclasses/instances only once
         for x in inprops[:]: 
-            if x[1]["url"]==rdflib.RDF.type:
+            if x[1]["url"]==RDF.type:
                 inprops.remove(x)
                 params["instances"].append(x[0])
-            elif x[1]["url"] in (rdflib.RDFS.subClassOf, 
-                                 rdflib.RDFS.domain, 
-                                 rdflib.RDFS.range): 
+            elif x[1]["url"] in (RDFS.subClassOf, 
+                                 RDFS.domain, 
+                                 RDFS.range): 
                 inprops.remove(x)
 
         p="class.html"
+
+    
 
     return render_template(p, **params)
           
@@ -474,7 +507,7 @@ def serve(graph_,debug=False):
 
 def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"], 
         label_properties=LABEL_PROPERTIES, 
-        hierarchy_properties=[ rdflib.RDFS.subClassOf, rdflib.RDFS.subPropertyOf ],
+        hierarchy_properties=[ RDFS.subClassOf, RDFS.subPropertyOf ],
         add_types_labels=True):
 
     """

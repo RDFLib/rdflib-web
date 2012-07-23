@@ -3,6 +3,7 @@ import StringIO
 
 bookrdf="""
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix book: <http://example.org/book/> .
 @prefix dc: <http://purl.org/dc/elements/1.1/> .
 @prefix vcard: <http://www.w3.org/2001/vcard-rdf/3.0#> .
@@ -12,7 +13,7 @@ bookrdf="""
     dc:title "Harry Potter and the Philosopher\'s Stone" .
 
 <http://example.org/book/book2> a book:Book ;
-    dc:creator <http://example.org/book/MrsRowling> ;
+    book:author <http://example.org/book/MrsRowling> ;
     dc:title "Harry Potter & the Chamber of Secrets" .
 
 <http://example.org/book/book3> a book:Book ;
@@ -41,6 +42,25 @@ bookrdf="""
 <http://example.org/book/MrsRowling> a book:Person ; 
     vcard:Family "Rowling";
     vcard:Given "Joanna" .
+
+book:Work a rdfs:Class ;
+    rdfs:label "Work" .
+
+book:Publication a rdfs:Class ;
+    rdfs:label "Publication" . 
+
+book:Book a rdfs:Class ; 
+    rdfs:subClassOf book:Work, book:Publication ;
+    rdfs:label "Book" .
+
+dc:creator a rdf:Property ; 
+    rdfs:label "creator" ; 
+    rdfs:domain book:Book .
+
+book:author a rdf:Property ; 
+    rdfs:label "author" ; 
+    rdfs:domain book:Book ;
+    rdfs:subPropertyOf dc:creator . 
 
 
 """

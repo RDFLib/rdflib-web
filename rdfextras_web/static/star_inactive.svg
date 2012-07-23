@@ -14,14 +14,17 @@
    height="24"
    id="svg2"
    version="1.1"
-   inkscape:version="0.48.1 r9760"
-   sodipodi:docname="star_inactive.svg">
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="star_inactive.svg"
+   inkscape:export-filename="/home/grimnes/projects/rdflib/rdfextras-web/rdfextras_web/static/star_inactive.png"
+   inkscape:export-xdpi="67.5"
+   inkscape:export-ydpi="67.5">
   <defs
      id="defs4">
     <linearGradient
        id="linearGradient3755">
       <stop
-         style="stop-color:#4386a4;stop-opacity:1;"
+         style="stop-color:#4386a4;stop-opacity:0.484375;"
          offset="0"
          id="stop3757" />
       <stop
@@ -46,9 +49,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="11.2"
-     inkscape:cx="9.8889532"
-     inkscape:cy="14.629078"
+     inkscape:zoom="41.210332"
+     inkscape:cx="12"
+     inkscape:cy="11.99996"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -76,7 +79,7 @@
      transform="translate(0,-1028.3622)">
     <path
        sodipodi:type="star"
-       style="color:#000000;fill:url(#linearGradient3761);fill-opacity:1;fill-rule:nonzero;stroke:#7c7c7c;stroke-width:0.74068308000000005;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="color:#000000;fill:url(#linearGradient3761);fill-opacity:1;fill-rule:nonzero;stroke:#7c7c7c;stroke-width:0.74068308000000005;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;opacity:0.4826087"
        id="path2985"
        sodipodi:sides="5"
        sodipodi:cx="7.0535712"

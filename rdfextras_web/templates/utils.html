@@ -1,0 +1,17 @@
+{% macro tree(items) %}
+<ul>
+{% for node,children in items recursive %}
+	{% if node is mapping %}
+        {% set node=[node] %}
+	{% endif %}
+    <li>
+	{{ node | term | join(", ") }}
+	{% if children %}
+		<ul>
+		{{ loop(children) }}
+		</ul>
+	{% endif %}
+	</li>
+{% endfor %}
+</ul>
+{% endmacro %}
