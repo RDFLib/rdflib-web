@@ -140,12 +140,12 @@ def lookup_label(t, graph):
 def get_label(r): 
     try: 
         return lod.config["labels"][r]
-    except: 
+    except:
         try: 
             l=urllib2.unquote(localname(r))
         except: 
             l=r
-        lod.config["labels"]=l
+        lod.config["labels"][r]=l
         return l
         
 
@@ -159,7 +159,7 @@ def find_types(graph):
     types[RDFS.Class]=localname(RDFS.Class)
     types[RDF.Property]=localname(RDF.Property)
     for s,p,o in graph.triples((None, RDF.type, None)):
-        if o not in types: types[o]=localname(o)
+        if o not in types: types[o]=_quote(localname(o))
         resource_types[s].add(o)
 
     for t in types: 
@@ -194,7 +194,7 @@ def find_resources(graph):
         for x in graph.subjects(RDF.type, t): 
             resources[t][x]=_quote(localname(x))
 
-    #resources[RDFS.Class]=lod.config["types"].copy()
+    resources[RDFS.Class]=lod.config["types"].copy()
 
     return resources
 
