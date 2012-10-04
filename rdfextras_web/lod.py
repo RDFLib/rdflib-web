@@ -23,6 +23,7 @@ import subprocess
 import codecs 
 import os.path
 import itertools
+import time
 
 import rdflib
 from rdflib import RDF, RDFS
@@ -94,24 +95,27 @@ def resolve(r):
     if r==None:
         return { 'url': None, 'realurl': None, 'label': None }
     if isinstance(r, rdflib.Literal): 
-        return { 'url': None, 'realurl': None, 'label': get_label(r), 'lang': r.language }
+        return { 'url': None, 'realurl': None, 'label': unicode(r), 'lang': r.language }
         
     localurl=None
     if lod.config["types"]=={None: None}:
-        if (r, RDF.type, None) in g.graph:
+        if lod.config["resource_types"][r] in g.graph:
             localurl=url_for("resource", label=lod.config["resources"][None][r])
     else:
-        for t in g.graph.objects(r,RDF.type):
+        for t in lod.config["resource_types"][r]:
             if t in lod.config["types"]: 
-                l=lod.config["resources"][t][r].decode("utf8")
-                localurl=url_for("resource", type_=lod.config["types"][t], label=l)                
-                break
-    url=r
-    if localurl: url=localurl
-    return { 'url': url, 'realurl': r, 'label': get_label(r) }
+                try: 
+                    l=lod.config["resources"][t][r].decode("utf8")
+                    localurl=url_for("resource", type_=lod.config["types"][t], label=l)                
+                    break
+                except KeyError: pass
+
+    return { 'url': localurl or r, 
+             'realurl': r, 
+             'label': get_label(r) }
 
 def localname(t): 
-    """qname computer is not quite what we want"""
+    """standard rdflib qname computer is not quite what we want"""
     
     r=t[max(t.rfind("/"), t.rfind("#"))+1:]
     # pending apache 2.2.18 being available 
@@ -119,12 +123,12 @@ def localname(t):
     r=r.replace("%2F", "_")
     return r
 
-def get_label(t): 
+def lookup_label(t, graph): 
     if isinstance(t, rdflib.Literal): return unicode(t)
     for l in lod.config["label_properties"]:
         try: 
-            return g.graph.objects(t,l).next()
-        except: 
+            return graph.objects(t,l).next()
+        except StopIteration: 
             pass
     try: 
         #return g.graph.namespace_manager.compute_qname(t)[2]
@@ -132,30 +136,47 @@ def get_label(t):
     except: 
         return t
 
+
+def get_label(r): 
+    try: 
+        return lod.config["labels"][r]
+    except: 
+        try: 
+            l=urllib2.unquote(localname(r))
+        except: 
+            l=r
+        lod.config["labels"]=l
+        return l
+        
+
 def label_to_url(label):
     label=re.sub(re.compile('[^\w ]',re.U), '',label)
     return re.sub(" ", "_", label)
 
-def detect_types(graph): 
+def find_types(graph): 
     types={}
+    resource_types=collections.defaultdict(set)
     types[RDFS.Class]=localname(RDFS.Class)
     types[RDF.Property]=localname(RDF.Property)
-    for t in set(graph.objects(None, RDF.type)):
-        types[t]=localname(t)
+    for s,p,o in graph.triples((None, RDF.type, None)):
+        if o not in types: types[o]=localname(o)
+        resource_types[s].add(o)
 
-    # make sure type triples are in graph
     for t in types: 
-        graph.add((t, RDF.type, RDFS.Class))
+        resource_types[t].add(RDFS.Class)
 
-    return types
+    return types, resource_types
 
 def reverse_types(types): 
+    """Generate cache of localname=>type mapping"""
     rtypes={}
     for t,l in types.iteritems(): 
         while l in rtypes: 
             warnings.warn(u"Multiple types for label '%s': (%s) rewriting to '%s_'"%(l,rtypes[l], l))           
             l+="_"
         rtypes[l]=t
+
+    # rewrite type cache, in case we changed some labels
     types.clear()
     for l,t in rtypes.iteritems():
         types[t]=l
@@ -163,6 +184,9 @@ def reverse_types(types):
 
             
 def find_resources(graph): 
+
+    """Build up cache of type=>[resource=>localname]]"""
+    
     resources=collections.defaultdict(dict)
     
     for t in lod.config["types"]: 
@@ -175,6 +199,12 @@ def find_resources(graph):
     return resources
 
 def reverse_resources(resources): 
+    """
+    Reverse resource-cache, build up cache
+    type=>[localname=>resource] 
+
+    (for finding resources when entering URL)
+    """
     rresources={}
     for t,res in resources.iteritems(): 
         rresources[t]={}
@@ -191,6 +221,13 @@ def reverse_resources(resources):
 
     return rresources
 
+def find_labels(graph, resources): 
+    labels={}
+    for t, res in resources.iteritems(): 
+        for r in res: 
+            if r not in labels:
+                labels[r]=lookup_label(r, graph)
+    return labels
 
 def _quote(l): 
     if isinstance(l,unicode): 
@@ -222,6 +259,9 @@ def rdfgraph(label, format_,type_=None):
         return r
 
     graph=rdflib.Graph()
+    for p,ns in g.graph.namespaces():
+        graph.bind(p,ns)
+    #graph.namespace_manager=g.graph.namespace_manager
     graph+=g.graph.triples((r,None,None))
     graph+=g.graph.triples((None,None,r))
 
@@ -311,7 +351,7 @@ def page(label, type_=None):
 
     outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props])
     
-    types=sorted([ resolve(x) for x in g.graph.objects(r,RDF.type)])
+    types=sorted([ resolve(x) for x in lod.config["resource_types"][r]])
 
     comments=list(g.graph.objects(r,RDFS.comment))
     
@@ -333,7 +373,7 @@ def page(label, type_=None):
         
     if r==RDF.Property:
         # page for all properties
-        roots=graphutils.find_roots(g.graph, RDFS.subPropertyOf, set(x for x in g.graph.subjects(RDF.type, r)))
+        roots=graphutils.find_roots(g.graph, RDFS.subPropertyOf, set(lod.config["resources"][r]))
         params["properties"]=[graphutils.get_tree(g.graph, x, RDFS.subPropertyOf, resolve) for x in roots]
         for x in inprops[:]: 
             if x[1]["url"]==RDF.type:
@@ -518,17 +558,22 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
     lod.config["hierarchy_properties"]=hierarchy_properties
     lod.config["add_types_labels"]=add_types_labels
     
+    foundtypes, resource_types=find_types(graph)
     if types=='auto':
-        lod.config["types"]=detect_types(graph)
+        lod.config["types"]=foundtypes
     elif types==None: 
         lod.config["types"]={None:None}
     else: 
         lod.config["types"]=types
 
+    lod.config["resource_types"]=resource_types
+
     lod.config["rtypes"]=reverse_types(lod.config["types"])
 
     lod.config["resources"]=find_resources(graph)
     lod.config["rresources"]=reverse_resources(lod.config["resources"])
+
+    lod.config["labels"]=find_labels(graph, lod.config["resources"])
 
     # make sure we get one session per app
     lod.config["SESSION_COOKIE_NAME"]="SESSION_"+re.sub('[^a-zA-Z0-9_]','_', str(graph.identifier))
@@ -536,7 +581,16 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
    
     return lod    
     
-    
+@lod.before_request
+def __start(): 
+    g.start=time.time()
+
+@lod.after_request
+def __end(response): 
+    diff = time.time() - g.start
+    if response.response and response.content_type.startswith("text/html"):
+        response.response[0]=response.response[0].replace('__EXECUTION_TIME__', "%.3f"%diff)
+    return response
     
 
 def _main(g, out, opts): 
