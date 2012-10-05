@@ -210,7 +210,7 @@ def reverse_resources(resources):
         rresources[t]={}
         for r, l in res.iteritems():
             while l in rresources[t]: 
-                warnings.warn(u"Multiple resources for label '%s': (%s) rewriting to '%s_'"%(repr(l),rresources[t][l], repr(l+'_')))           
+                warnings.warn(u"Multiple resources for label '%s': (%s, %s) rewriting to '%s_'"%(repr(l),rresources[t][l], r, repr(l+'_')))           
                 l+="_"
                 
             rresources[t][l]=r
@@ -374,14 +374,14 @@ def page(label, type_=None):
     if r==RDF.Property:
         # page for all properties
         roots=graphutils.find_roots(g.graph, RDFS.subPropertyOf, set(lod.config["resources"][r]))
-        params["properties"]=[graphutils.get_tree(g.graph, x, RDFS.subPropertyOf, resolve) for x in roots]
+        params["properties"]=[graphutils.get_tree(g.graph, x, RDFS.subPropertyOf, resolve, lambda x: x[0]['label']) for x in roots]
         for x in inprops[:]: 
             if x[1]["url"]==RDF.type:
                 inprops.remove(x)
 
         
         p="properties.html"
-    elif (r, RDF.type, RDF.Property) in g.graph: 
+    elif RDF.Property in lod.config["resource_types"][r]:
         # a single property
 
         params["properties"]=[graphutils.get_tree(g.graph, r, RDFS.subPropertyOf, resolve)]
@@ -402,7 +402,7 @@ def page(label, type_=None):
     elif r==RDFS.Class or r==rdflib.OWL.Class: 
         # page for all classes
         roots=graphutils.find_roots(g.graph, RDFS.subClassOf, set(lod.config["types"]))
-        params["classes"]=[graphutils.get_tree(g.graph, x, RDFS.subClassOf, resolve) for x in roots]
+        params["classes"]=[graphutils.get_tree(g.graph, x, RDFS.subClassOf, resolve, sortkey=lambda x: x[0]['label']) for x in roots]
         
         p="classes.html"
         # show classes only once
@@ -410,7 +410,7 @@ def page(label, type_=None):
             if x[1]["url"]==RDF.type:
                 inprops.remove(x)
 
-    elif (r, RDF.type, RDFS.Class) in g.graph or (r, RDF.type, rdflib.OWL.Class) in g.graph:
+    elif RDFS.Class in lod.config["resource_types"][r] or rdflib.OWL.Class in lod.config["resource_types"][r]:
         # page for a single class
         
         params["classes"]=[graphutils.get_tree(g.graph, r, RDFS.subClassOf, resolve)]
