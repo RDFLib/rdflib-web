@@ -64,7 +64,8 @@ class RDFUrlConverter(BaseConverter):
 def termdict_link(ctx, t): 
     if not t: return ""
     if isinstance(t,dict): 
-        return Markup("<a href='%s'>%s</a>")%(t['url'], t['label'])
+        cls='class="external"' if t['external'] else ''
+        return Markup("<a %s href='%s'>%s</a>"%(cls, t['url'], t['label']))
     else: 
         return [termdict_link(ctx,x) for x in t]
 
@@ -96,6 +97,9 @@ def resolve(r):
         return { 'url': None, 'realurl': None, 'label': None }
     if isinstance(r, rdflib.Literal): 
         return { 'url': None, 'realurl': None, 'label': unicode(r), 'lang': r.language }
+
+    # if str(r)=='http://www.agroxml.de/rdf/vocabulary/workProcess#WorkProcess':
+    #     asldkj
         
     localurl=None
     if lod.config["types"]=={None: None}:
@@ -110,7 +114,8 @@ def resolve(r):
                     break
                 except KeyError: pass
 
-    return { 'url': localurl or r, 
+    return { 'external': not localurl,
+             'url': localurl or r, 
              'realurl': r, 
              'label': get_label(r) }
 
@@ -194,7 +199,7 @@ def find_resources(graph):
         for x in graph.subjects(RDF.type, t): 
             resources[t][x]=_quote(localname(x))
 
-    resources[RDFS.Class]=lod.config["types"].copy()
+    resources[RDFS.Class].update(lod.config["types"].copy())
 
     return resources
 
@@ -374,7 +379,8 @@ def page(label, type_=None):
     if r==RDF.Property:
         # page for all properties
         roots=graphutils.find_roots(g.graph, RDFS.subPropertyOf, set(lod.config["resources"][r]))
-        params["properties"]=[graphutils.get_tree(g.graph, x, RDFS.subPropertyOf, resolve, lambda x: x[0]['label']) for x in roots]
+        roots=sorted(roots, key=lambda x: get_label(x).lower())
+        params["properties"]=[graphutils.get_tree(g.graph, root, RDFS.subPropertyOf, resolve, lambda x: x[0]['label'].lower()) for root in roots]
         for x in inprops[:]: 
             if x[1]["url"]==RDF.type:
                 inprops.remove(x)
@@ -402,7 +408,8 @@ def page(label, type_=None):
     elif r==RDFS.Class or r==rdflib.OWL.Class: 
         # page for all classes
         roots=graphutils.find_roots(g.graph, RDFS.subClassOf, set(lod.config["types"]))
-        params["classes"]=[graphutils.get_tree(g.graph, x, RDFS.subClassOf, resolve, sortkey=lambda x: x[0]['label']) for x in roots]
+        roots=sorted(roots, key=lambda x: get_label(x).lower())
+        params["classes"]=[graphutils.get_tree(g.graph, root, RDFS.subClassOf, resolve, sortkey=lambda x: x[0]['label'].lower()) for root in roots]
         
         p="classes.html"
         # show classes only once
@@ -481,7 +488,7 @@ def index():
         resources[turl]=sorted([resolve(x) for x in lod.config["resources"][turl]][:10], 
             key=lambda x: x.get('label'))
         if len(lod.config["resources"][turl])>10:
-            resources[turl].append({ 'url': t["url"], 'label': "..." })
+            resources[turl].append({ 'url': t["url"], 'external': False, 'label': "..." })
         t["count"]=len(lod.config["resources"][turl])
     
     return render_template("lodindex.html", 

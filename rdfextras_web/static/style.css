@@ -63,3 +63,8 @@ hr {
     margin-left: 5px;
 }
 
+.external:after { 
+	content: " \021f2;" ;
+	vertical-align: super;
+	font-size: 50%;
+}
