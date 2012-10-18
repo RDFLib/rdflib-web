@@ -223,6 +223,18 @@ hr {
 #versions a, #footermenu a { color: #6285cb; }
 #footermenu img { height: 16px; }
 
+#classmenu { 
+	margin-top: -10px;
+	float: right; 
+	width: 400px; 
+	max-height: 500px; 
+	overflow-y: scroll;
+	border-left: 1px solid #ddd; 
+	border-bottom: 1px solid #ddd; 
+	background: #eee;
+	padding-left: 10px;
+}
+
 .termtype { 
 	color: #444;
 	font-size: 80%;
@@ -242,4 +254,8 @@ hr {
 	content: " \021f2;" ;
 	vertical-align: super;
 	font-size: 50%;
+}
+
+#search {
+	float: right; 
 }

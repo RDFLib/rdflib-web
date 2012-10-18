@@ -2,7 +2,8 @@
 {% import 'utils.html' as utils %}
 {% block body %}
 {{super()}}
-<h1>Instances</h1>
+
+<div id='classmenu'>
 <h2>Classes</h2>
 <p>jump to instances of a certain class </p>
 {% if types[0].realurl!=None %}
@@ -12,6 +13,8 @@
 <li><a href="#type{{loop.index0}}">{{t.label}}</a></li>
 {% endfor %}
 </ul>
+</div>
+
 <h2>Instances</h2>
 {% for t in types %}
 <h3><a name="type{{loop.index0}}"><a href='{{t.url}}'>{{t.label}} ({{t.count}})</a></a></h3>
