@@ -65,6 +65,7 @@ def termdict_link(ctx, t):
     if not t: return ""
     if isinstance(t,dict): 
         cls='class="external"' if t['external'] else ''
+
         return Markup("<a %s href='%s'>%s</a>"%(cls, t['url'], t['label']))
     else: 
         return [termdict_link(ctx,x) for x in t]
@@ -117,7 +118,8 @@ def resolve(r):
     return { 'external': not localurl,
              'url': localurl or r, 
              'realurl': r, 
-             'label': get_label(r) }
+             'label': get_label(r),
+             'picked': r in session["picked"]}
 
 def localname(t): 
     """standard rdflib qname computer is not quite what we want"""
@@ -356,7 +358,7 @@ def page(label, type_=None):
 
     outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props])
     
-    types=sorted([ resolve(x) for x in lod.config["resource_types"][r]])
+    types=sorted([ resolve(x) for x in lod.config["resource_types"][r]], key=lambda x: x['label'].lower())
 
     comments=list(g.graph.objects(r,RDFS.comment))
     
@@ -481,20 +483,34 @@ def resource(label, type_=None):
 
 @lod.route("/")
 def index(): 
-    types=sorted([resolve(x) for x in lod.config["types"]], key=lambda x: x['label'])
+    types=sorted([resolve(x) for x in lod.config["types"]], key=lambda x: x['label'].lower())
     resources={}
     for t in types:
         turl=t["realurl"]
         resources[turl]=sorted([resolve(x) for x in lod.config["resources"][turl]][:10], 
-            key=lambda x: x.get('label'))
+            key=lambda x: x.get('label').lower())
         if len(lod.config["resources"][turl])>10:
             resources[turl].append({ 'url': t["url"], 'external': False, 'label': "..." })
         t["count"]=len(lod.config["resources"][turl])
     
-    return render_template("lodindex.html", 
+    return render_template("lodindex.html")
+
+@lod.route("/instances")
+def instances(): 
+    types=sorted([resolve(x) for x in lod.config["types"]], key=lambda x: x['label'].lower())
+    resources={}
+    for t in types:
+        turl=t["realurl"]
+        resources[turl]=sorted([resolve(x) for x in lod.config["resources"][turl]][:10], 
+            key=lambda x: x.get('label').lower())
+        if len(lod.config["resources"][turl])>10:
+            resources[turl].append({ 'url': t["url"], 'external': False, 'label': "..." })
+        t["count"]=len(lod.config["resources"][turl])
+    
+    return render_template("instances.html", 
                            types=types, 
-                           resources=resources,
-                           graph=g.graph)
+                           resources=resources)
+    
 
 @lod.before_request
 def setupSession():
@@ -554,13 +570,18 @@ def serve(graph_,debug=False):
 def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"], 
         label_properties=LABEL_PROPERTIES, 
         hierarchy_properties=[ RDFS.subClassOf, RDFS.subPropertyOf ],
-        add_types_labels=True):
+        add_types_labels=True,dbname="RDFLib LOD App"):
 
     """
     Get the LOD Flask App setup to serve the given graph
     """
 
     lod.config["graph"]=graph
+    lod.config["dbname"]=dbname
+
+    lod.config["js"]={ "endpoint": "static", "filename":"lod.js" }
+    lod.config["jssetup"]="lodsetup()"
+
     lod.config["label_properties"]=label_properties
     lod.config["hierarchy_properties"]=hierarchy_properties
     lod.config["add_types_labels"]=add_types_labels
@@ -595,17 +616,22 @@ def __start():
 @lod.after_request
 def __end(response): 
     diff = time.time() - g.start
-    if response.response and response.content_type.startswith("text/html"):
+    if response.response and response.content_type.startswith("text/html") and response.status_code==200:
         response.response[0]=response.response[0].replace('__EXECUTION_TIME__', "%.3f"%diff)
+        response.headers["Content-Length"]=len(response.response[0])
     return response
     
 
 def _main(g, out, opts): 
     import rdflib    
     import sys
+
+    dbname="commandline DB"
+    
     if len(g)==0:
         import bookdb
         g=bookdb.bookdb
+        dbname='Books DB'
 
     opts=dict(opts)
     debug='-d' in opts
@@ -615,7 +641,7 @@ def _main(g, out, opts):
     if '-n' in opts:
         types=None
  
-    get(g, types=types).run(debug=debug)
+    get(g, types=types, dbname=dbname).run(host="0.0.0.0", debug=debug)
 
 def main(): 
     from rdfextras.utils.cmdlineutils import main as cmdmain

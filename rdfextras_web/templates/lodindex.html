@@ -1,50 +1,14 @@
-{% extends "index.html" %}
+{% extends "lodbase.html" %}
 
 {% block title %}RDFLib LOD Server{% endblock %}
 
- {% block intro %}
-<h1>Welcome to a RDFLib LOD Server</h1>
+ {% block body %}
+{{super()}}
+<h1>Welcome to the {{config["dbname"]}} RDFLib LOD Server</h1>
 
 <p>This is a <a href="http://linkeddata.org">Linked Open Data</a> like server for <a href="http://code.google.com/p/rdflib/">rdflib</a>.
     A <a href="http://www.w3.org/TR/rdf-sparql-query/">SPARQL</a> endpoint, conforming to the <a href="http://www.w3.org/TR/rdf-sparql-protocol/">SPARQL Protocol</a> with <a href="http://www.joseki.org/">Joseki</a> extensions is also included.</p>
 
-<h3>Menu:</h3>
-<ul>
-  <li><a href="#resources">browse</a></li>
-  <li><a href="#download">download</a></li>
-  <li><a href="#query">query</a></li>
-  <li><a href="{{url_for('picked')}}"><img src="{{url_for('static', filename='star_active.png')}}" /> resources</a></li>
-</ul>
-
-<hr/>
-
-<h2><a name="resources">Resources</a></h2>
-{% if types[0].realurl!=None %}
-
-<ul>
-{% for t in types %}
-<li><a href="#type{{loop.index0}}">{{t.label}}</a></li>
-{% endfor %}
-</ul>
-
-{% for t in types %}
-<h3><a name="type{{loop.index0}}"><a href='{{t.url}}'>{{t.label}} ({{t.count}})</a></a></h3>
-<ul>
-{% for r in resources[t.realurl] %}
-<li>{{r|term}}</li>
-{% endfor %}
-</ul>
-{% endfor %}
-{% else %}
-
-<ul>
-{% for r in resources[None] %}
-<li>{{r|term}}</li>
-{% endfor %}
-</ul>
-
-
-{% endif %}
 
 <hr/>
 
@@ -58,6 +22,28 @@
   <li><a href="{{url_for("download", format_="nt") }}">N-Triples</a></li>
 </ul>
 <hr/>
+
+{% block query %}
+<h2><a name='query'>Query:</a></h2>
+    <form action="{{url_for("query")}}" name="query" method="GET">
+      <textarea rows="10" cols="80" name="query">
+PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;
+PREFIX dc: &lt;http://purl.org/dc/elements/1.1/&gt;
+
+SELECT * WHERE { ?x dc:title ?label . }
+      </textarea><br/>
+      <label>Result format:</label> <select name="output">
+        <option>xml</option>
+        <option>json</option>
+        <option>html</option>
+      </select>
+      <br/>
+      <label>Force text/plain:</label><input type="checkbox" name="force-accept" /><br/>
+      <input type="submit" value="query">
+    </form>
+{% endblock %}
+
 
 {% endblock %}
 

@@ -9,14 +9,40 @@
     <title>{% block title %}{% endblock %}</title>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+	{% if config.js %}
+	<script src="{{url_for(**config.js)}}"></script>
+	{% endif %}
+	{% if config.jssetup %}
+	<script>
+	  $(document).ready(function() { {{config.jssetup}}; } );
+	</script>
+	{% endif %}
   </head>
   <body>
+
+	<div id="header" class='clearfix'>
+	  <div class="container">
+		{% block header %}
+		{% endblock %}
+	  </div>
+	</div>
+
+	<div id="main">
+	  <div class="container">
     {% block body %}
     {% endblock %}
-    <hr/>
+	  </div>
+	</div>
+
+	<div id="footer"> 
+	  <div class="container">
     {% block footer %}
+
     <div id="versions">running rdflib {{rdflib_version}}, rdfextras {{rdfextras_version}} on python {{python_version}} -- processing took __EXECUTION_TIME__s</div>
     {% endblock %}
+	  </div>
+	</div>
     
   </body>
 </html>

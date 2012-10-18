@@ -1,8 +1,12 @@
-{% extends "base.html" %}
+{% extends "lodbase.html" %}
+{% import 'utils.html' as utils %}
 
-{% block title %}{{label}} @ RDFLib LOD Server{% endblock %}
+{% block title %}{{label}} @ {{config["dbname"]}}{% endblock %}
 
  {% block body %}
+{{super()}}
+
+
 <h1>
 
   {{label}}
@@ -17,9 +21,9 @@
 is-a 
 <span id="typelist">	
 	{% for t in types %}
-	{{t|term}}
+	{{utils.term(t)}}
 	{% if t.realurl.__str__() == "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property" %}
-	( {{ domain | term | join(",") }} &rArr; {{ range | term | join(",") }} )
+	( {{ utils.term(domain) }} &rArr; {{ term(range) }} )
 	{% endif %}
 	{% if not loop.last %}, {% endif %}
 	{% endfor %}
@@ -38,9 +42,9 @@ is-a
 </thead>
 {% for p,v in outprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">
-  <td>{{p|term}}</td>
+  <td>{{utils.term(p)}}</td>
   {% if v.url %}
-  <td>{{v|term}}</td>
+  <td>{{utils.term(v)}}</td>
   {% else %}
   <td>"{{v.label}}"
   {% if v.lang %} <i>({{v.lang}})</i> {% endif %}
@@ -57,9 +61,9 @@ is-a
 </thead>
 {% for v,p in inprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">
-  <td>{{v|term}}</td>
+  <td>{{utils.term(v)}}</td>
   {% if p.url %}
-  <td>{{p|term}}</a></td>
+  <td>{{utils.term(p)}}</a></td>
   {% else %}
   <td>{{p.label}}
   {% endif %}
@@ -67,10 +71,9 @@ is-a
 {% endfor %}
 </table>
 {% endif %}
-<hr/>
-<div id="footer">
-	<a href="{{url_for('index')}}">back to index</a> - 
-	<a href="{{url_for('picked')}}"><img src="{{url_for('static', filename='star_active.png')}}" /> resources</a> - 	
+
+<div id="footermenu">
+
 Download as: 
 {% if type_ %}
 <a href="{{url_for('data', type_=type_, label=urilabel, format_='nt') }}">ntriples</a> |

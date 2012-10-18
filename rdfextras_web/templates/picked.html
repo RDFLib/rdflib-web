@@ -1,7 +1,7 @@
-{% extends "base.html" %}
-
+{% extends "lodbase.html" %}
+{% import 'utils.html' as utils %}
 {% block body %}
-
+{{super()}}
 <h1>Picked resources:</h1>
 
 <p>Starring resources lets you export or graph several resources as once, click the star icon next to labels of a few things, then come here and export or graph them together.
@@ -13,10 +13,7 @@ Click the stars in the list below to deselect individual resources.
 {% if things %}
 {% for r in things %}
 <li>
-<a href="{{url_for('pick', uri=r.realurl)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
-
-
-{{r|term}}</li>
+{{utils.term(r)}}</li>
 {% endfor %}
 {% else %}
 <li>Nothing picked</li>
@@ -57,8 +54,5 @@ Click the stars in the list below to deselect individual resources.
 </div>
 
 <br/>
-<div id="footer">
-  <a href='/'>back to index</a>	
-</div>
 
 {% endblock %}

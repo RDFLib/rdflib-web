@@ -5,7 +5,7 @@
         {% set node=[node] %}
 	{% endif %}
     <li>
-	{{ node | term | join(", ") }}
+	{{ term(node) }}
 	{% if children %}
 		<ul>
 		{{ loop(children) }}
@@ -14,4 +14,27 @@
 	</li>
 {% endfor %}
 </ul>
+{% endmacro %}
+
+{% macro term(t) %}
+
+{% if t is not mapping %}
+
+{% for x in t %}
+{{ term(x) }}
+{{ ", " if not loop.last }}
+{% endfor %}
+
+{% else %}
+<span class='term'>
+  <a class="{{'external' if t.external }}" href="{{t.url}}">{{t.label}}</a>
+{% if t.picked %}
+<a class='picker' style="display: inline" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
+{% else %}
+<a class='picker hidden' style="display: none" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
+{% endif %}
+</span>
+
+{% endif %}
+
 {% endmacro %}

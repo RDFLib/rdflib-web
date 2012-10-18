@@ -8,6 +8,7 @@
 
     <p>This is a <a href="http://www.w3.org/TR/rdf-sparql-query/">SPARQL</a> endpoint, conforming to the <a href="http://www.w3.org/TR/rdf-sparql-protocol/">SPARQL Protocol</a> powered by <a href="http://code.google.com/p/rdflib/">rdflib</a>. Some extension from <a href="http://www.joseki.org/">Joseki</a> are also included.</p>
 {% endblock %}
+
 {% block query %}
 <h2><a name='query'>Query:</a></h2>
     <form action="{{url_for("query")}}" name="query" method="GET">
