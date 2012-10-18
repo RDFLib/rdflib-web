@@ -76,7 +76,10 @@ def lfu_cache(maxsize=100):
                     for key, _ in nsmallest(maxsize // 10,
                                             use_count.iteritems(),
                                             key=itemgetter(1)):
-                        del cache[key], use_count[key]
+                        try: 
+                            del cache[key], use_count[key]
+                        except: 
+                            pass
 
             return result
 
