@@ -489,15 +489,6 @@ def resource(label, type_=None):
 
 @lod.route("/")
 def index(): 
-    types=sorted([resolve(x) for x in lod.config["types"]], key=lambda x: x['label'].lower())
-    resources={}
-    for t in types:
-        turl=t["realurl"]
-        resources[turl]=sorted([resolve(x) for x in lod.config["resources"][turl]][:10], 
-            key=lambda x: x.get('label').lower())
-        if len(lod.config["resources"][turl])>10:
-            resources[turl].append({ 'url': t["url"], 'external': False, 'label': "..." })
-        t["count"]=len(lod.config["resources"][turl])
     
     return render_template("lodindex.html")
 

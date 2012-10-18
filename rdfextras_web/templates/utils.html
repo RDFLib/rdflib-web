@@ -21,7 +21,7 @@
 {% if t is not mapping %}
 
 {% for x in t %}
-{{ term(x) }}
+{{ term(x, withpicker, withclass) }}
 {{ ", " if not loop.last }}
 {% endfor %}
 
@@ -40,7 +40,7 @@
 
 {% if withclass and t.type%}
 <br/>
-<span class='termtype'>a {{term(t.type)}}</span>
+<span class='termtype'>a {{term(t.type, withpicker=False)}}</span>
 {% endif %}
 
 {% endif %}
