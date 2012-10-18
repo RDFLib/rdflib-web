@@ -223,7 +223,14 @@ hr {
 #versions a, #footermenu a { color: #6285cb; }
 #footermenu img { height: 16px; }
 
+.termtype { 
+	color: #444;
+	font-size: 80%;
+}
 
+.termtype a { 
+	color: #445;
+}
 
 .inlinelist ul li { 
     float: left; 

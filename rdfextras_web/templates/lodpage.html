@@ -23,7 +23,7 @@ is-a
 	{% for t in types %}
 	{{utils.term(t)}}
 	{% if t.realurl.__str__() == "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property" %}
-	( {{ utils.term(domain) }} &rArr; {{ term(range) }} )
+	( {{ utils.term(domain) }} &rArr; {{ utils.term(range) }} )
 	{% endif %}
 	{% if not loop.last %}, {% endif %}
 	{% endfor %}
@@ -44,7 +44,7 @@ is-a
 <tr class="{{ loop.cycle('odd', 'even') }}">
   <td>{{utils.term(p)}}</td>
   {% if v.url %}
-  <td>{{utils.term(v)}}</td>
+  <td>{{utils.term(v, withclass=True)}}</td>
   {% else %}
   <td>"{{v.label}}"
   {% if v.lang %} <i>({{v.lang}})</i> {% endif %}
@@ -61,7 +61,7 @@ is-a
 </thead>
 {% for v,p in inprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">
-  <td>{{utils.term(v)}}</td>
+  <td>{{utils.term(v, withclass=True)}}</td>
   {% if p.url %}
   <td>{{utils.term(p)}}</a></td>
   {% else %}

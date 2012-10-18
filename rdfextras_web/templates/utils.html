@@ -16,7 +16,7 @@
 </ul>
 {% endmacro %}
 
-{% macro term(t) %}
+{% macro term(t, withpicker=True, withclass=False) %}
 
 {% if t is not mapping %}
 
@@ -28,12 +28,20 @@
 {% else %}
 <span class='term'>
   <a class="{{'external' if t.external }}" href="{{t.url}}">{{t.label}}</a>
-{% if t.picked %}
-<a class='picker' style="display: inline" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
-{% else %}
-<a class='picker hidden' style="display: none" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
-{% endif %}
+  {% if withpicker %}
+
+	  {% if t.picked %}
+	  <a class='picker' style="display: inline" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
+	  {% else %}
+	  <a class='picker hidden' style="display: none" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
+	  {% endif %}
+   {% endif %}
 </span>
+
+{% if withclass and t.type%}
+<br/>
+<span class='termtype'>a {{term(t.type)}}</span>
+{% endif %}
 
 {% endif %}
 

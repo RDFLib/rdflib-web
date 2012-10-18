@@ -14,13 +14,13 @@
    <ul class="pagenav-tabs">
 
      <li>
-	   <a class="pagenav-tab {{'selected' if request.path=='/' else ''}}" href="/">
+	   <a class="pagenav-tab {{'selected' if request.path=='/' else ''}}" href="{{url_for('index')}}">
 		 /
 	   </a>
 	 </li>
             
      <li>
-	   <a class="pagenav-tab {{'selected' if request.path=='/instances' else ''}}" href="/instances">
+	   <a class="pagenav-tab {{'selected' if request.path=='/instances' else ''}}" href="{{url_for('instances')}}">
 		 Instances
 	   </a>
 	 </li>

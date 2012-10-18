@@ -41,6 +41,7 @@ from jinja2 import contextfilter, Markup
 from .endpoint import endpoint as lod
 from . import mimeutils
 
+from rdfextras_web.caches import lfu_cache
 
 POSSIBLE_DOT=["/usr/bin/dot", "/usr/local/bin/dot", "/opt/local/bin/dot"]
 for x in POSSIBLE_DOT: 
@@ -86,7 +87,7 @@ LABEL_PROPERTIES=[RDFS.label,
                   rdflib.URIRef("http://www.w3.org/2006/vcard/ns#org")
                   
                   ]
-
+@lfu_cache(200)
 def resolve(r):
     """
     URL is the potentially local URL
@@ -103,6 +104,7 @@ def resolve(r):
     # if str(r)=='http://www.agroxml.de/rdf/vocabulary/workProcess#WorkProcess':
     #     asldkj
         
+    t=None
     localurl=None
     if lod.config["types"]=={None: None}:
         if lod.config["resource_types"][r] in g.graph:
@@ -116,10 +118,13 @@ def resolve(r):
                     break
                 except KeyError: pass
 
+    types=[ resolve(t) for t in lod.config["resource_types"][r] if t!=r]
+
     return { 'external': not localurl,
              'url': localurl or r, 
              'realurl': r, 
              'label': get_label(r),
+             'type': types,
              'picked': r in session["picked"]}
 
 def localname(t): 
