@@ -322,6 +322,8 @@ def _resourceGraph(r):
     if not "notypes" in request.args and lod.config["add_types_labels"]:
         _addTypesLabels(graph, g.graph)
 
+    return graph
+
 
 @lod.route("/data/<type_>/<rdf:label>.<format_>")
 @lod.route("/data/<rdf:label>.<format_>")
