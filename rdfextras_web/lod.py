@@ -271,15 +271,7 @@ def rdfgraph(label, format_,type_=None):
     if isinstance(r,tuple): # 404
         return r
 
-    graph=rdflib.Graph()
-    for p,ns in g.graph.namespaces():
-        graph.bind(p,ns)
-    #graph.namespace_manager=g.graph.namespace_manager
-    graph+=g.graph.triples((r,None,None))
-    graph+=g.graph.triples((None,None,r))
-
-    if lod.config["add_types_labels"]:
-        addTypesLabels(graph, g.graph)
+    graph=_resourceGraph(r)
 
     return graphrdf(graph, format_)
 
@@ -294,7 +286,8 @@ def dot(inputgraph, format_):
     if format_ not in GRAPH_TYPES:
         return "format '%s' not supported, try %s"%(format_, ", ".join(GRAPH_TYPES)), 415
 
-    p=subprocess.Popen([DOT, "-T%s"%format_], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    rankdir=request.args.get("rankdir", "BT")
+    p=subprocess.Popen([DOT, "-Grankdir=%s"%rankdir, "-T%s"%format_], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     uw=codecs.getwriter("utf8")(p.stdin)
     inputgraph(uw)
 
@@ -307,8 +300,7 @@ def dot(inputgraph, format_):
 
     return Response(readres(), mimetype=GRAPH_TYPES[format_])
 
-
-def addTypesLabels(subgraph, graph):
+def _addTypesLabels(subgraph, graph):
     addMe=[]
     for o in itertools.chain(subgraph.objects(None,None),subgraph.subjects(None,None)):
         if not isinstance(o, rdflib.term.Node): continue
@@ -319,6 +311,17 @@ def addTypesLabels(subgraph, graph):
                 break
     subgraph+=addMe
 
+def _resourceGraph(r):
+    graph=rdflib.Graph()
+    for p,ns in g.graph.namespaces():
+        graph.bind(p,ns)
+
+    graph+=g.graph.triples((r,None,None))
+    graph+=g.graph.triples((None,None,r))
+
+    if not "notypes" in request.args and lod.config["add_types_labels"]:
+        _addTypesLabels(graph, g.graph)
+
 
 @lod.route("/data/<type_>/<rdf:label>.<format_>")
 @lod.route("/data/<rdf:label>.<format_>")
@@ -327,16 +330,10 @@ def data(label, format_, type_=None):
     if isinstance(r,tuple): # 404
         return r
 
-
+    graph=_resourceGraph(r)
     #graph=g.graph.query('DESCRIBE %s'%r.n3())
     # DESCRIBE <uri> is broken.
     # http://code.google.com/p/rdfextras/issues/detail?id=25
-    graph=rdflib.Graph()
-    graph+=g.graph.triples((r,None,None))
-    graph+=g.graph.triples((None,None,r))
-
-    if lod.config["add_types_labels"]:
-        addTypesLabels(graph, g.graph)
 
     return serialize(graph, format_)
 
@@ -559,12 +556,15 @@ def picked(action=None, format_=None):
 
     def pickedgraph():
         graph=rdflib.Graph()
+        for p,ns in g.graph.namespaces():
+            graph.bind(p,ns)
+
         for x in session["picked"]:
             graph+=g.graph.triples((x,None,None))
             graph+=g.graph.triples((None,None,x))
 
-        if lod.config["add_types_labels"]:
-            addTypesLabels(graph, g.graph)
+        if not "notypes" in request.args and lod.config["add_types_labels"]:
+            _addTypesLabels(graph, g.graph)
 
         return graph
 
