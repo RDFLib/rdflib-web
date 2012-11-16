@@ -12,10 +12,24 @@ body {
 }
 
 table { border-collapse: collapse; }
-thead tr { border-bottom: 2px solid #aaa; }
+thead tr { border-bottom: 2px solid #aaa; cursor: pointer ; }
 th, td { text-align: left; padding: 10px; color: #333; }
 tbody tr { border-bottom: 1px solid #ccc; }
 tbody tr.even { background-color: #fafafa; }
+
+thead tr .headerSortUp {
+    text-decoration: underline;
+}
+thead tr .headerSortUp:after {
+    content: '  \2227';
+}
+thead tr .headerSortDown { 
+    text-decoration: underline;
+}
+ thead tr .headerSortDown:after {
+    content: '  \2228';
+}
+
 
 
 .pagenav {

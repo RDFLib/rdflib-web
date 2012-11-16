@@ -9,7 +9,8 @@
     <title>{% block title %}{% endblock %}</title>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css" />
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+	<script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='jquery.tablesorter.min.js') }}"></script>
 	{% if config.js %}
 	<script src="{{url_for(**config.js)}}"></script>
 	{% endif %}
@@ -18,6 +19,9 @@
 	  $(document).ready(function() { {{config.jssetup}}; } );
 	</script>
 	{% endif %}
+	<script>
+	  $(document).ready(function() { $('table').tablesorter(); });
+	</script>
   </head>
   <body>
 

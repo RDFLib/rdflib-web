@@ -24,6 +24,8 @@ import traceback
 
 import mimeutils
 
+import rdfextras_web.htmlresults
+
 endpoint = Flask(__name__)
 
 endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
@@ -58,8 +60,11 @@ def query():
 
         # default-graph-uri
 
+        for p,ns in g.graph.namespaces():
+            rdfextras_web.htmlresults.nm.bind(p,ns,override=True)
+
         results=g.graph.query(q).serialize(format=format)
-        if format=='html':
+        if format=='html':            
             response=make_response(render_template("results.html", results=Markup(unicode(results,"utf-8")), q=q))
         else:
             response=make_response(results)

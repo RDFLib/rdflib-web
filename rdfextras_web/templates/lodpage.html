@@ -38,7 +38,7 @@ is-a
 <h2>Properties:</h2>
 <table>
 <thead>
-  <tr><td>property</td><td>value</td></tr>
+  <tr><th>property</th><th>value</th></tr>
 </thead>
 {% for p,v in outprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">
@@ -57,7 +57,7 @@ is-a
 <h2>Incoming Properties:</h2>
 <table>
 <thead>
-  <tr><td>node</td><td>property</td></tr>
+  <tr><th>node</th><th>property</th></tr>
 </thead>
 {% for v,p in inprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">

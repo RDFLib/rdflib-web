@@ -1,3 +1,24 @@
+"""
+
+SPARQL Result Serializer and RDF Serializer 
+for nice human readable HTML tables
+
+>>> from rdflib import RDF, RDFS, XSD, Graph, Literal
+>>> g=Graph()
+>>> g.add((RDF.Property, RDF.type, RDFS.Class))
+>>> g.add((RDF.Property, RDFS.label, Literal('Property')))
+>>> g.add((RDF.Property, RDFS.label, Literal('Property', datatype=XSD.string)))
+>>> g.add((RDF.Property, RDFS.label, Literal('Eigenschaft', lang='de')))
+
+>>> s=g.query('select * where { ?s ?p ?o . }').serialize(format='html')
+>>> 'rdf:type' in s
+True
+>>> '@de' in s
+True
+>>> '^^&lt;xsd:string&gt;' in s
+True
+"""
+
 import rdflib
 from rdflib.query import ResultSerializer
 from rdflib.serializer import Serializer
@@ -6,20 +27,30 @@ import warnings
 
 from jinja2 import Environment, contextfilter, Markup
 
+nm=rdflib.Graph().namespace_manager
+nm.bind('xsd',rdflib.XSD)
+
+def qname(ctx, t):
+    try:
+        if "graph" in ctx: 
+            l=ctx["graph"].namespace_manager.compute_qname(t, False)
+        else: 
+            l=nm.compute_qname(t, False)
+        return u'%s:%s'%(l[0],l[2])
+    except: 
+        return t
+
 
 @contextfilter
 def term_to_string(ctx, t): 
     if isinstance(t, rdflib.URIRef):
-        try:
-            l=ctx.parent["graph"].namespace_manager.qname(t)
-        except: 
-            l=t
+        l=qname(ctx,t)
         return Markup(u"<a href='%s'>%s</a>"%(t,l))
     elif isinstance(t, rdflib.Literal): 
         if t.language: 
             return '"%s"@%s'%(t,t.language)
         elif t.datatype: 
-            return '"%s"^^<%s>'%(t,t.datatype)
+            return '"%s"^^&lt;%s&gt;'%(t,qname(ctx,t.datatype))
         else:
             return '"%s"'%t
     return t
@@ -109,4 +140,14 @@ class HTMLSerializer(Serializer):
         res=res.encode(encoding)
         stream.write(res)
 
+
+if __name__=='__main__':
+    import rdflib
+    g=rdflib.Graph()
+    g.add((rdflib.RDF.Property, rdflib.RDF.type, rdflib.RDFS.Class))
+    g.add((rdflib.RDF.Property, rdflib.RDFS.label, rdflib.Literal('Property')))
+    g.add((rdflib.RDF.Property, rdflib.RDFS.label, rdflib.Literal('Property', datatype=rdflib.XSD.string)))
+    g.add((rdflib.RDF.Property, rdflib.RDFS.label, rdflib.Literal('Eigenschaft', lang='de')))
+
+    s=g.query('select * where { ?s ?p ?o . }').serialize(format='html')
 

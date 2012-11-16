@@ -10,7 +10,7 @@
 <h3>&rArr; properties</h3>
 <table>
 <thead>
-  <tr><td></td><td>property</td><td>range</td></tr>
+  <tr><th></th><th>property</th><th>range</th></tr>
 </thead>
 {% for p,r in classoutprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">
@@ -29,7 +29,7 @@
 <h3>&lArr; properties</h3>
 <table>
 <thead>
-  <tr><td>domain</td><td>property</td><td></td></tr>
+  <tr><th>domain</th><th>property</th><th></th></tr>
 </thead>
 {% for d,p in classinprops %}
 <tr class="{{ loop.cycle('odd', 'even') }}">
