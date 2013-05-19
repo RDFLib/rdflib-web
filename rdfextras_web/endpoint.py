@@ -18,7 +18,9 @@ except:
     raise Exception("Flask not found - install with 'easy_install flask'")
 
 import rdflib
+
 import sys
+import time
 import traceback
 
 import mimeutils
@@ -29,7 +31,7 @@ from . import __version__
 endpoint = Flask(__name__)
 
 endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
-endpoint.jinja_env.globals["rdfextras_web"]=__version__
+endpoint.jinja_env.globals["rdfextras_web_version"]=__version__
 endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
 
@@ -60,9 +62,6 @@ def query():
 
         # default-graph-uri
 
-        for p,ns in g.graph.namespaces():
-            htmlresults.nm.bind(p,ns,override=True)
-
         results=g.graph.query(q).serialize(format=format)
         if format=='html':            
             response=make_response(render_template("results.html", results=Markup(unicode(results,"utf-8")), q=q))
@@ -78,6 +77,24 @@ def query():
 @endpoint.route("/")
 def index():
     return render_template("index.html")
+
+@endpoint.before_first_request    
+def __register_namespaces(): 
+    for p,ns in endpoint.config["graph"].namespaces():
+        htmlresults.nm.bind(p,ns,override=True)
+
+@endpoint.before_request
+def __start(): 
+    g.start=time.time()
+
+@endpoint.after_request
+def __end(response): 
+    diff = time.time() - g.start
+    if response.response and response.content_type.startswith("text/html") and response.status_code==200:
+        response.response[0]=response.response[0].replace('__EXECUTION_TIME__', "%.3f"%diff)
+        response.headers["Content-Length"]=len(response.response[0])
+    return response
+
 
 def serve(graph_,debug=False):
     """Serve the given graph on localhost with the LOD App"""

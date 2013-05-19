@@ -23,17 +23,20 @@ import subprocess
 import codecs 
 import os.path
 import itertools
-import time
 
 import rdflib
-from rdflib import RDF, RDFS
 
-from flask import render_template, request, make_response, redirect, url_for, g, Response, abort, session
+from rdflib import RDF, RDFS
+import rdflib.util as util
+from rdflib.tools import rdfs2dot, rdf2dot
+
+
+from flask import render_template, request, make_response, redirect, url_for, g, Response, session
 
 from werkzeug.routing import BaseConverter
 from werkzeug.urls import url_quote
 
-from jinja2 import contextfilter, contextfunction, Markup
+from jinja2 import contextfilter, Markup
 
 from .endpoint import endpoint as lod
 from . import mimeutils
@@ -378,9 +381,9 @@ def page(label, type_=None):
         
     if r==RDF.Property:
         # page for all properties
-        roots=graphutils.find_roots(g.graph, RDFS.subPropertyOf, set(lod.config["resources"][r]))
+        roots=util.find_roots(g.graph, RDFS.subPropertyOf, set(lod.config["resources"][r]))
         roots=sorted(roots, key=lambda x: get_label(x).lower())
-        params["properties"]=[graphutils.get_tree(g.graph, root, RDFS.subPropertyOf, resolve, lambda x: x[0]['label'].lower()) for root in roots]
+        params["properties"]=[util.get_tree(g.graph, root, RDFS.subPropertyOf, resolve, lambda x: x[0]['label'].lower()) for root in roots]
         for x in inprops[:]: 
             if x[1]["url"]==RDF.type:
                 inprops.remove(x)
@@ -390,7 +393,7 @@ def page(label, type_=None):
     elif RDF.Property in lod.config["resource_types"][r]:
         # a single property
 
-        params["properties"]=[graphutils.get_tree(g.graph, r, RDFS.subPropertyOf, resolve)]
+        params["properties"]=[util.get_tree(g.graph, r, RDFS.subPropertyOf, resolve)]
 
         superProp=[resolve(x) for x in g.graph.objects(r,RDFS.subPropertyOf) ]
         if superProp: 
@@ -407,9 +410,9 @@ def page(label, type_=None):
         p="property.html"
     elif r==RDFS.Class or r==rdflib.OWL.Class: 
         # page for all classes
-        roots=graphutils.find_roots(g.graph, RDFS.subClassOf, set(lod.config["types"]))
+        roots=util.find_roots(g.graph, RDFS.subClassOf, set(lod.config["types"]))
         roots=sorted(roots, key=lambda x: get_label(x).lower())
-        params["classes"]=[graphutils.get_tree(g.graph, root, RDFS.subClassOf, resolve, sortkey=lambda x: x[0]['label'].lower()) for root in roots]
+        params["classes"]=[util.get_tree(g.graph, root, RDFS.subClassOf, resolve, sortkey=lambda x: x[0]['label'].lower()) for root in roots]
         
         p="classes.html"
         # show classes only once
@@ -420,7 +423,7 @@ def page(label, type_=None):
     elif RDFS.Class in lod.config["resource_types"][r] or rdflib.OWL.Class in lod.config["resource_types"][r]:
         # page for a single class
         
-        params["classes"]=[graphutils.get_tree(g.graph, r, RDFS.subClassOf, resolve)]
+        params["classes"]=[util.get_tree(g.graph, r, RDFS.subClassOf, resolve)]
 
         superClass=[resolve(x) for x in g.graph.objects(r,RDFS.subClassOf) ]
         if superClass: 
@@ -607,17 +610,6 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
    
     return lod    
     
-@lod.before_request
-def __start(): 
-    g.start=time.time()
-
-@lod.after_request
-def __end(response): 
-    diff = time.time() - g.start
-    if response.response and response.content_type.startswith("text/html") and response.status_code==200:
-        response.response[0]=response.response[0].replace('__EXECUTION_TIME__', "%.3f"%diff)
-        response.headers["Content-Length"]=len(response.response[0])
-    return response
     
 
 def _main(g, out, opts): 

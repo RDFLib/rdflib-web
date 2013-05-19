@@ -88,7 +88,7 @@ extras_require = {
 config.update(
     entry_points = {
         'console_scripts': [
-            'sparqlendpointapp = rdfextras_web.endpoint:main',
+            'rdfsparqlapp = rdfextras_web.endpoint:main',
             'rdflodapp = rdfextras_web.lod:main',                
         ],
         'rdf.plugins.serializer': [
