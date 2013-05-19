@@ -73,7 +73,8 @@ else:
 
 
 install_requires = [
-    'flask'
+    'flask',
+    'rdflib>=4.0',
 ]
 
 tests_require = install_requires
