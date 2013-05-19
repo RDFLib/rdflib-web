@@ -35,10 +35,8 @@ from werkzeug.urls import url_quote
 
 from jinja2 import contextfilter, contextfunction, Markup
 
-from rdfextras_web.endpoint import endpoint as lod
-from rdfextras_web import mimeutils
-from rdfextras.tools import rdf2dot, rdfs2dot
-from rdfextras.utils import graphutils
+from .endpoint import endpoint as lod
+from . import mimeutils
 
 
 POSSIBLE_DOT=["/usr/bin/dot", "/usr/local/bin/dot", "/opt/local/bin/dot"]
@@ -644,7 +642,7 @@ def _main(g, out, opts):
     get(g, types=types, dbname=dbname).run(host="0.0.0.0", debug=debug)
 
 def main(): 
-    from rdfextras.utils.cmdlineutils import main as cmdmain
+    from .cmdlineutils import main as cmdmain
     cmdmain(_main, options='t:nd', stdin=False)
 
 if __name__=='__main__':

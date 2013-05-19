@@ -18,18 +18,18 @@ except:
     raise Exception("Flask not found - install with 'easy_install flask'")
 
 import rdflib
-import rdfextras
 import sys
 import traceback
 
 import mimeutils
 
-import rdfextras_web.htmlresults
+from . import htmlresults
+from . import __version__
 
 endpoint = Flask(__name__)
 
 endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
-endpoint.jinja_env.globals["rdfextras_version"]=rdfextras.__version__
+endpoint.jinja_env.globals["rdfextras_web"]=__version__
 endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
 
@@ -61,7 +61,7 @@ def query():
         # default-graph-uri
 
         for p,ns in g.graph.namespaces():
-            rdfextras_web.htmlresults.nm.bind(p,ns,override=True)
+            htmlresults.nm.bind(p,ns,override=True)
 
         results=g.graph.query(q).serialize(format=format)
         if format=='html':            
@@ -113,7 +113,7 @@ def _main(g, out, opts):
     serve(g, True)
 
 def main(): 
-    from rdfextras.utils.cmdlineutils import main as cmdmain
+    from .cmdlineutils import main as cmdmain
     cmdmain(_main, stdin=False)
 
 if __name__=='__main__':
