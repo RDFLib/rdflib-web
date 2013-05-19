@@ -48,15 +48,12 @@ NOSE_ARGS = [
         #'--with-coverage',
         #'--enable-cover',
         #'--enable-audit',
-        #'--extra-include=rdfextras',
-        #'--source-folder=rdfextras',
         #'--trim-errors',
         #'--with-EARL',
         #'--with-xunit',
     ]
 
 COVERAGE_EXTRA_ARGS = [
-        '--cover-package=rdfextras',
         '--cover-inclusive',
         '--cover-html',
         '--cover-html-dir=coverage',
@@ -64,7 +61,7 @@ COVERAGE_EXTRA_ARGS = [
 
 DEFAULT_ATTRS = ['!known_issue', '!performancetest', '!storetest'] # ['!known_issue', '!sparql']
 
-DEFAULT_DIRS = ['test', 'rdfextras']
+DEFAULT_DIRS = ['test']
 
 
 if __name__ == '__main__':

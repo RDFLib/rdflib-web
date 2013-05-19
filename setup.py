@@ -73,8 +73,8 @@ else:
 
 
 install_requires = [
-    'rdfextras',
-    'flask'
+    'flask',
+    'rdflib>=4.0',
 ]
 
 tests_require = install_requires
@@ -99,7 +99,6 @@ config.update(
         ],
 
     },
-    #namespace_packages = ['rdfextras'], # TODO: really needed?
     install_requires = install_requires,
     tests_require = tests_require,
     extras_require = extras_require 

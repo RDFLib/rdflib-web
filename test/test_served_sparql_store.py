@@ -1,24 +1,14 @@
-from nose.exc import SkipTest
-raise SkipTest("SPARQL store server test skipped")
+#from nose.exc import SkipTest
+#raise SkipTest("SPARQL store server test skipped")
 import unittest
 import threading
 import rdflib
-import rdfextras
-try:
-    import rdfextras.web.endpoint
-    webserver = True
-except:
-    webserver = False
-import rdfextras.store.SPARQL
+import rdfextras_web.endpoint
 
 
 class TestSPARQLStore(unittest.TestCase): 
     def testSPARQLStore(self):
-        # The mechanisms to properly skip tests are only in Python 2.7/3.1
-        if not webserver:
-            return "Skipped test - web server not available."
-        
-        g=rdflib.Graph()
+        g=rdflib.Graph(identifier='http://example.org/testgraph')
 
         data="""<http://example.org/book/book1> <http://purl.org/dc/elements/1.1/title> "SPARQL Tutorial" .
 <http://example.org/book/b\xc3\xb6\xc3\xb6k8> <http://purl.org/dc/elements/1.1/title> "Moose bite can be very n\xc3\xb6sty."@se .
@@ -29,14 +19,14 @@ class TestSPARQLStore(unittest.TestCase):
 
         # # create our own SPARQL endpoint
 
-        app=rdfextras.web.endpoint.get(g)
+        app=rdfextras_web.endpoint.get(g)
         t=threading.Thread(target=lambda : app.run(port=57234))
         t.daemon=True
         t.start()
         import time
         time.sleep(1)
-        store=rdfextras.store.SPARQL.SPARQLStore("http://localhost:57234/sparql")
-        g2=rdflib.Graph(store)
+        g2=rdflib.ConjunctiveGraph('SPARQLStore')
+        g2.open("http://localhost:57234/sparql")
         b=rdflib.URIRef("http://example.org/book/book1")
         b2=rdflib.URIRef("http://example.org/book/b\xc3\xb6\xc3\xb6k8")
         DCtitle=rdflib.URIRef("http://purl.org/dc/elements/1.1/title")
