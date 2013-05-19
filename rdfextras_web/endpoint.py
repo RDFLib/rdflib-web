@@ -113,7 +113,7 @@ def _main(g, out, opts):
     serve(g, True)
 
 def main(): 
-    from .cmdlineutils import main as cmdmain
+    from rdflib.extras.cmdlineutils import main as cmdmain
     cmdmain(_main, stdin=False)
 
 if __name__=='__main__':

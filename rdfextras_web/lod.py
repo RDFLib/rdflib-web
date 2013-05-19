@@ -642,7 +642,7 @@ def _main(g, out, opts):
     get(g, types=types, dbname=dbname).run(host="0.0.0.0", debug=debug)
 
 def main(): 
-    from .cmdlineutils import main as cmdmain
+    from rdflib.extras.cmdlineutils import main as cmdmain
     cmdmain(_main, options='t:nd', stdin=False)
 
 if __name__=='__main__':
