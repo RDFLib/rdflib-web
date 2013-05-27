@@ -388,6 +388,7 @@ def page(label, type_=None):
         roots=util.find_roots(g.graph, RDFS.subPropertyOf, set(lod.config["resources"][r]))
         roots=sorted(roots, key=lambda x: get_label(x).lower())
         params["properties"]=[util.get_tree(g.graph, root, RDFS.subPropertyOf, resolve, lambda x: x[0]['label'].lower()) for root in roots]
+
         for x in inprops[:]:
             if x[1]["url"]==RDF.type:
                 inprops.remove(x)
