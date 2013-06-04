@@ -13,7 +13,7 @@ or get the application object yourself by called :py:func:`get` function
 
 """
 try:
-    from flask import Flask, render_template, request, make_response, Markup, g
+    from flask import Flask, render_template, request, make_response, Markup, g, url_for
 except:
     raise Exception("Flask not found - install with 'easy_install flask'")
 
@@ -92,6 +92,78 @@ def query():
         return response
     except: 
         return "<pre>"+traceback.format_exc()+"</pre>", 400
+
+def graph_store_do(graph_uri):
+    if not graph_uri and not request.method == 'POST':
+        return make_response("Missing URL query string parameter 'graph' or 'default'", 400)
+    if request.method == 'PUT':
+        if graph_uri in g.graph.graphs():
+            existed = True
+            g.graph.remove_graph(graph_uri)
+        else:
+            existed = False
+        g.graph.parse(data=request.data, publicID=graph_uri, format=request.mimetype)
+        response = make_response('', 204 if existed else 201)
+    elif request.method == 'DELETE':
+        if graph_uri in g.graph.graphs():
+            g.graph.remove_graph(graph_uri)
+            response = make_response('', 204)
+        else:
+            response = make_response('Graph %s not found' % graph_uri, 404)
+    elif request.method == 'POST' and request.mimetype == "multipart/form-data":
+        existed = graph_uri in g.graph.graphs()
+        force_mimetype = request.args.get('mimetype')
+        for _, data_file in request.files.items():
+            data = data_file.read()
+            mimetype = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
+            g.graph.parse(data=data, publicID=graph_uri, format=mimetype)
+        response = make_response('', 204 if existed else 201)
+    elif request.method == 'POST':
+        additional_headers = dict()
+        if not graph_uri:
+            # Coin a new identifier
+            url = url_for("graph_store_direct_put", path=str(rdflib.BNode()), _external=True)
+            graph_uri = rdflib.URIRef(url)
+            additional_headers['location'] = url
+        existed = graph_uri in g.graph.graphs()
+        if request.mimetype == "multipart/form-data":
+            force_mimetype = request.args.get('mimetype')
+            for _, data_file in request.files.items():
+                data = data_file.read()
+                mimetype = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
+                g.graph.parse(data=data, publicID=graph_uri, format=mimetype)
+        else:
+            g.graph.parse(data=request.data, publicID=graph_uri, format=request.mimetype)
+        response = make_response('', 204 if existed else 201, additional_headers)
+    else:
+        if graph_uri in g.graph.graphs():
+            format, _, content_type = content_negotiation()
+            response = make_response(g.graph.graph(graph_uri).serialize(format=format))
+            response.headers["Content-Type"] = content_type
+        else:
+            response = make_response('Graph %s not found' % graph_uri, 404)
+    return response
+
+@endpoint.route("/graph-store", methods=["GET", "PUT", "POST", "DELETE"]) # HEAD is done by flask via GET
+def graph_store_indirect_get():
+    
+    graph_uri = request.values.get("graph", None)
+    default = request.values.get("default", None)
+
+    if 'default' in request.values:
+        graph_uri = rdflib.Dataset.DEFAULT
+    elif 'graph' in request.values:
+        graph_uri = rdflib.URIRef(request.values['graph'])
+    else:
+        graph_uri = None
+
+    return graph_store_do(graph_uri)
+
+@endpoint.route("/graph-store/<path:path>", methods=["GET", "POST", "PUT", "DELETE"]) # HEAD is done by flask via GET
+def graph_store_direct_put(path):
+    graph_uri = rdflib.URIRef(request.url)
+
+    return graph_store_do(graph_uri)
 
 
 @endpoint.route("/")
