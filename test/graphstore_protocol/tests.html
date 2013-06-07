@@ -62,7 +62,7 @@ Content-Type: text/turtle; charset=utf-8
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
 @prefix v: &lt;http://www.w3.org/2006/vcard/ns#> .
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> a foaf:Person;
+&lt;http://$HOST$$GRAPHSTORE$/person/1> a foaf:Person;
     foaf:businessCard [ 
         a v:VCard;
         v:fn "John Doe" 
@@ -76,7 +76,7 @@ Content-Type: text/turtle; charset=utf-8
         <h2 id='get_of_put__initial_state'>GET of PUT - Initial state</h2>
         <h3>Request</h3>
         <pre>
-GET $GRAPHSTORE$?graph=$GRAPHSTORE$/person/1.ttl HTTP/1.1
+GET $GRAPHSTORE$?graph=http://$HOST$$GRAPHSTORE$/person/1.ttl HTTP/1.1
 Host: $HOST$
 Accept: text/turtle
 
@@ -87,7 +87,10 @@ Accept: text/turtle
 Content-Type: text/turtle; charset=utf-8
 Content-Length: ...
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> a foaf:Person;
+@prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
+@prefix v: &lt;http://www.w3.org/2006/vcard/ns#> .
+
+&lt;http://$HOST$$GRAPHSTORE$/person/1> a foaf:Person;
    foaf:businessCard [ 
         a v:VCard;
         v:fn "John Doe" 
@@ -99,6 +102,7 @@ Content-Length: ...
         <pre>
 HEAD $GRAPHSTORE$/person/1.ttl HTTP/1.1
 Host: $HOST$
+Accept: text/turtle
 
         </pre>
         <h3>Response</h3>
@@ -130,7 +134,7 @@ Content-Type: text/turtle; charset=utf-8
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
 @prefix v: &lt;http://www.w3.org/2006/vcard/ns#> .
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> a foaf:Person;
+&lt;http://$HOST$$GRAPHSTORE$/person/1> a foaf:Person;
     foaf:businessCard [ 
         a v:VCard;
         v:fn "Jane Doe" 
@@ -158,7 +162,7 @@ Content-Length: ...
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
 @prefix v: &lt;http://www.w3.org/2006/vcard/ns#> .
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> a foaf:Person;
+&lt;http://$HOST$$GRAPHSTORE$/person/1> a foaf:Person;
    foaf:businessCard [ 
         a v:VCard;
         v:fn "Jane Doe" 
@@ -182,8 +186,10 @@ Content-Type: text/turtle; charset=utf-8
     ] .
         </pre>
         <h3>Response</h3>
+        <p>rdflib: Changed from '201 Created' to '204 No Content' because the
+        default graph always already exists.</p>
         <pre>
-201 Created            
+204 No Content
         </pre>
 
         <h2 id='get_of_put__default_graph'>GET of PUT - default graph</h2>
@@ -210,6 +216,7 @@ Content-Length: ...
     ] .            
         </pre>
 
+<!-- Broken test. This request is good like this.
         <h2 id='put__mismatched_payload'>PUT - mismatched payload</h2>
         <h3>Request</h3>
         <pre>
@@ -220,7 +227,7 @@ Content-Type: text/turtle; charset=utf-8
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
 @prefix v: &lt;http://www.w3.org/2006/vcard/ns#> .
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> a foaf:Person;
+&lt;http://$HOST$$GRAPHSTORE$/person/1> a foaf:Person;
     foaf:businessCard [ 
         a v:VCard;
         v:fn "Jane Doe" 
@@ -230,18 +237,22 @@ Content-Type: text/turtle; charset=utf-8
         <pre>
 400 Bad Request            
         </pre>
+-->
         
         <h2 id='put__empty_graph'>PUT - empty graph</h2>
         <h3>Request</h3>
         <pre>
-PUT $GRAPHSTORE$?graph=$GRAPHSTORE$/person/2.ttl HTTP/1.1
+PUT $GRAPHSTORE$?graph=http://$HOST$$GRAPHSTORE$/person/2.ttl HTTP/1.1
 Host: $HOST$
 Content-Type: text/turtle; charset=utf-8
    
         </pre>
         <h3>Response</h3>
+        <p>rdflib: Changed from '200 OK' to '201 Created' because
+        the graph 2.ttl does not yet exist. (Although the
+        specification is a bit fishy in this regard.)</p>
         <pre>
-200 OK            
+201 Created
         </pre>
         
         <h2 id='get_of_put__empty_graph'>GET of PUT - empty graph</h2>
@@ -263,7 +274,7 @@ Content-Length: ...
         <h2 id='put__replace_empty_graph'>PUT - replace empty graph</h2>
         <h3>Request</h3>
         <pre>
-PUT $GRAPHSTORE$?graph=$GRAPHSTORE$/person/2.ttl HTTP/1.1
+PUT $GRAPHSTORE$?graph=http://$HOST$$GRAPHSTORE$/person/2.ttl HTTP/1.1
 Host: $HOST$
 Content-Type: text/turtle; charset=utf-8
 
@@ -277,8 +288,10 @@ Content-Type: text/turtle; charset=utf-8
     ] .
         </pre>
         <h3>Response</h3>
+        <p>rdflib: Changed from '200 OK' to '204 No Content' because the server
+        does not send a body.</p>
         <pre>
-200 OK            
+204 No Content
         </pre>
 
         <h2 id='get_of_replacement_for_empty_graph'>GET of replacement for empty graph</h2>
@@ -315,8 +328,10 @@ Host: $HOST$
 
         </pre>
         <h3>Response</h3>
+        <p>rdflib: Changed from '200 OK' to '204 No Content' for
+        obvious reasons.</p>
         <pre>
-200 OK            
+204 No Content
         </pre>
 
         <h2 id='get_of_delete__existing_graph'>GET of DELETE - existing graph</h2>
@@ -324,6 +339,7 @@ Host: $HOST$
         <pre>
 GET $GRAPHSTORE$/person/2.ttl HTTP/1.1
 Host: $HOST$            
+Accept: text/turtle
 
         </pre>
         <h3>Response</h3>
@@ -352,11 +368,12 @@ Content-Type: text/turtle; charset=utf-8
 
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> foaf:name "Jane Doe"            
+&lt;http://$HOST$$GRAPHSTORE$/person/1> foaf:name "Jane Doe" .
         </pre>
         <h3>Response</h3>
+        <p>rdflib: Changed from '200 OK' to '204 No Content'.</p>
         <pre>
-200 OK            
+204 No Content
         </pre>
 
         <h2 id='get_of_post__existing_graph'>GET of POST - existing graph</h2>
@@ -376,7 +393,7 @@ Content-Length: ...
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
 @prefix v: &lt;http://www.w3.org/2006/vcard/ns#> .
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> a foaf:Person;
+&lt;http://$HOST$$GRAPHSTORE$/person/1> a foaf:Person;
     foaf:name "Jane Doe";
     foaf:businessCard [ 
         a v:VCard;
@@ -396,20 +413,21 @@ Content-Disposition: form-data; name="lastName.ttl"; filename="lastName.ttl"
 Content-Type: text/turtle; charset=utf-8
 
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> foaf:familyName "Doe"
+&lt;http://$HOST$$GRAPHSTORE$/person/1> foaf:familyName "Doe" .
 
 --a6fe4cd636164618814be9f8d3d1a0de
 Content-Disposition: form-data; name="firstName.ttl"; filename="firstName.ttl"
 Content-Type: text/turtle; charset=utf-8
 
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> foaf:givenName "Jane"
+&lt;http://$HOST$$GRAPHSTORE$/person/1> foaf:givenName "Jane" .
 
 --a6fe4cd636164618814be9f8d3d1a0de--
         </pre>
         <h3>Response</h3>
+        <p>rdflib: Changed from '200 OK' to '204 No Content'.</p>
         <pre>
-200 OK            
+204 No Content
         </pre>
 
         <h2 id='get_of_post__multipart_formdata'>GET of POST - multipart/form-data</h2>
@@ -417,6 +435,7 @@ Content-Type: text/turtle; charset=utf-8
         <pre>
 GET $GRAPHSTORE$/person/1.ttl HTTP/1.1
 Host: $HOST$         
+Accept: text/turtle
    
         </pre>
         <h3>Response</h3>
@@ -428,7 +447,7 @@ Content-Length: ...
 @prefix foaf: &lt;http://xmlns.com/foaf/0.1/> .
 @prefix v: &lt;http://www.w3.org/2006/vcard/ns#> .
 
-&lt;http://$HOST$/$GRAPHSTORE$/person/1> a foaf:Person;
+&lt;http://$HOST$$GRAPHSTORE$/person/1> a foaf:Person;
     foaf:name           "Jane Doe";
     foaf:givenName      "Jane";
     foaf:familyName     "Doe";
