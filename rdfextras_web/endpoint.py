@@ -25,8 +25,8 @@ import traceback
 
 import mimeutils
 
-from . import htmlresults
-from . import __version__
+from rdfextras_web import htmlresults
+from rdfextras_web import __version__
 
 endpoint = Flask(__name__)
 
