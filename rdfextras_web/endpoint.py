@@ -13,7 +13,7 @@ or get the application object yourself by called :py:func:`get` function
 
 """
 try:
-    from flask import Flask, render_template, request, make_response, Markup, g
+    from flask import Flask, render_template, request, make_response, Markup, g, url_for
 except:
     raise Exception("Flask not found - install with 'easy_install flask'")
 
@@ -23,10 +23,9 @@ import sys
 import time
 import traceback
 
-import mimeutils
-
 from rdfextras_web import htmlresults
 from rdfextras_web import __version__
+from rdfextras_web import generic_endpoint
 
 endpoint = Flask(__name__)
 
@@ -34,6 +33,7 @@ endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
 endpoint.jinja_env.globals["rdfextras_web_version"]=__version__
 endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
+DEFAULT = generic_endpoint.DEFAULT
 
 @endpoint.route("/sparql", methods=['GET', 'POST'])
 def query():
@@ -73,6 +73,43 @@ def query():
     except: 
         return "<pre>"+traceback.format_exc()+"</pre>", 400
 
+def graph_store_do(graph_identifier):
+    method = request.method
+    mimetype = request.mimetype
+    args = request.args
+    if mimetype == "multipart/form-data":
+        body = []
+        force_mimetype = args.get('mimetype')
+        for _, data_file in request.files.items():
+            data = data_file.read()
+            mt = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
+            body.append({'data': data, 'mimetype': mt})
+        response = make_response('', 204)
+    else:
+        body = request.data
+
+    result = g.generic.graph_store(
+        method=method, graph_identifier=graph_identifier, args=args,
+        body=body, mimetype=mimetype,
+        accept_header=request.headers.get("Accept")
+    )
+    code, headers, body = result
+
+    response = make_response(body or '', code)
+    for k, v in headers.items():
+        response.headers[k] = v
+    return response
+
+
+@endpoint.route("/graph-store", methods=["GET", "PUT", "POST", "DELETE"]) # HEAD is done by flask via GET
+def graph_store_indirect():
+    return graph_store_do(None)
+
+@endpoint.route("/graph-store/<path:path>", methods=["GET", "POST", "PUT", "DELETE"]) # HEAD is done by flask via GET
+def graph_store_direct(path):
+    graph_identifier = rdflib.URIRef(request.url)
+    return graph_store_do(graph_identifier)
+
 
 @endpoint.route("/")
 def index():
@@ -80,8 +117,15 @@ def index():
 
 @endpoint.before_first_request    
 def __register_namespaces(): 
-    for p,ns in endpoint.config["graph"].namespaces():
+    for p,ns in endpoint.config["ds"].namespaces():
         htmlresults.nm.bind(p,ns,override=True)
+
+@endpoint.before_first_request    
+def __create_generic_endpoint():
+    endpoint.config["generic"]=generic_endpoint.GenericEndpoint(
+        ds=endpoint.config["ds"],
+        coin_url=lambda: url_for("graph_store_direct", path=str(rdflib.BNode()), _external=True)
+    )
 
 @endpoint.before_request
 def __start(): 
@@ -96,38 +140,35 @@ def __end(response):
     return response
 
 
-def serve(graph_,debug=False):
-    """Serve the given graph on localhost with the LOD App"""
+def serve(ds,debug=False):
+    """Serve the given dataset on localhost with the LOD App"""
 
-    a=get(graph_)
+    a=get(ds)
     a.run(debug=debug)
     return a
 
 @endpoint.before_request
-def _set_graph():
-    """ This sets the g.graph if we are using a static graph
+def _set_generic():
+    """ This sets the g.generic if we are using a static graph
     set in the configuration"""
-    if "graph" in endpoint.config and endpoint.config["graph"]!=None: 
-        g.graph=endpoint.config["graph"]
+    g.generic = endpoint.config["generic"]
 
-
-def get(graph_):
+def get(ds):
     """
-    Get the LOD Flask App setup to serve the given graph
+    Get the LOD Flask App setup to serve the given dataset
     """
 
-    endpoint.config["graph"]=graph_
+    endpoint.config["ds"]=ds
     return endpoint
 
 
 def _main(g, out, opts): 
     import rdflib    
     import sys
-    if len(g)==0:
-        import bookdb
-        g=bookdb.bookdb
     
-    serve(g, True)
+    ds = rdflib.Dataset()
+    ds += g
+    serve(ds, True)
 
 def main(): 
     from rdflib.extras.cmdlineutils import main as cmdmain
