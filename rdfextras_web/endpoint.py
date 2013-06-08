@@ -34,6 +34,26 @@ endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
 endpoint.jinja_env.globals["rdfextras_web_version"]=__version__
 endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
+def content_negotiation(query_result=None):
+    """Decides which format to use for serialization
+
+    :argument:query_results: Must be set to the return value of
+                             Graph.query. This is used to determine
+                             the available serialization formats. If
+                             None, a format Graph.serialize can
+                             produce gets chosen.
+    """
+    # TODO: How to distungiush between query results that contain a
+    # graph (DESCRIBE, CONSTRUCT) and one that contains rows?
+    if query_result and query_result.graph is None:
+        available = ['application/sparql-results+json', 'application/sparql-results+xml']
+    else:
+        available = ['application/rdf+xml', 'text/n3', 'text/turtle', 'application/n-triples']
+    a = request.accept_mimetypes
+    mimetype = a.best_match(available, default=available[0])
+    charset = 'utf-8' if mimetype.startswith('text/') else None
+    content_type = mimetype + ('; charset=' + charset if charset else '')
+    return mimetype, charset, content_type
 
 @endpoint.route("/sparql", methods=['GET', 'POST'])
 def query():
