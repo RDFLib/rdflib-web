@@ -229,11 +229,10 @@ def get(graph_):
 def _main(g, out, opts): 
     import rdflib    
     import sys
-    if len(g)==0:
-        import bookdb
-        g=bookdb.bookdb
     
-    serve(g, True)
+    ds = rdflib.Dataset()
+    ds += g
+    serve(ds, True)
 
 def main(): 
     from rdflib.extras.cmdlineutils import main as cmdmain
