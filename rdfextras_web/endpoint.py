@@ -34,6 +34,8 @@ endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
 endpoint.jinja_env.globals["rdfextras_web_version"]=__version__
 endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
+DEFAULT = 'DEFAULT'
+
 def content_negotiation(query_result=None):
     """Decides which format to use for serialization
 
@@ -93,77 +95,89 @@ def query():
     except: 
         return "<pre>"+traceback.format_exc()+"</pre>", 400
 
-def graph_store_do(graph_uri):
-    if not graph_uri and not request.method == 'POST':
+def graph_store_do(graph_identifier):
+    if not graph_identifier and not request.method == 'POST':
         return make_response("Missing URL query string parameter 'graph' or 'default'", 400)
-    if request.method == 'PUT':
-        if graph_uri in g.graph.graphs():
-            existed = True
-            g.graph.remove_graph(graph_uri)
+
+    if graph_identifier == DEFAULT:
+        existed = True
+    elif graph_identifier:
+        existed = graph_identifier in {g.identifier for g in g.graph.contexts()}
+
+    def get_context(identifier):
+        if graph_identifier == DEFAULT:
+            return g.graph.default_context
         else:
-            existed = False
-        g.graph.parse(data=request.data, publicID=graph_uri, format=request.mimetype)
+            return g.graph.get_context(identifier)
+
+    if request.method == 'PUT':
+        if existed:
+            g.graph.remove_context(graph_identifier)
+        target = get_context(graph_identifier)
+        target.parse(data=request.data, format=request.mimetype)
         response = make_response('', 204 if existed else 201)
+
     elif request.method == 'DELETE':
-        if graph_uri in g.graph.graphs():
-            g.graph.remove_graph(graph_uri)
+        if existed:
+            g.graph.remove_context(graph_identifier)
             response = make_response('', 204)
         else:
-            response = make_response('Graph %s not found' % graph_uri, 404)
+            response = make_response('Graph %s not found' % graph_identifier, 404)
+
     elif request.method == 'POST' and request.mimetype == "multipart/form-data":
-        existed = graph_uri in g.graph.graphs()
         force_mimetype = request.args.get('mimetype')
         for _, data_file in request.files.items():
             data = data_file.read()
             mimetype = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
-            g.graph.parse(data=data, publicID=graph_uri, format=mimetype)
-        response = make_response('', 204 if existed else 201)
+            target = get_context(graph_identifier)
+            target.parse(data=data, format=mimetype)
+        response = make_response('', 204)
+
     elif request.method == 'POST':
         additional_headers = dict()
-        if not graph_uri:
+        if not graph_identifier:
             # Coin a new identifier
-            url = url_for("graph_store_direct_put", path=str(rdflib.BNode()), _external=True)
-            graph_uri = rdflib.URIRef(url)
+            existed = False
+            url = url_for("graph_store_direct", path=str(rdflib.BNode()), _external=True)
+            graph_identifier = rdflib.URIRef(url)
             additional_headers['location'] = url
-        existed = graph_uri in g.graph.graphs()
+        target = get_context(graph_identifier)
         if request.mimetype == "multipart/form-data":
             force_mimetype = request.args.get('mimetype')
             for _, data_file in request.files.items():
                 data = data_file.read()
                 mimetype = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
-                g.graph.parse(data=data, publicID=graph_uri, format=mimetype)
+                target.parse(data=data, format=mimetype)
         else:
-            g.graph.parse(data=request.data, publicID=graph_uri, format=request.mimetype)
+            target.parse(data=request.data, format=request.mimetype)
         response = make_response('', 204 if existed else 201, additional_headers)
+
     else:
-        if graph_uri in g.graph.graphs():
+        if existed:
             format, _, content_type = content_negotiation()
-            response = make_response(g.graph.graph(graph_uri).serialize(format=format))
+            response = make_response(get_context(graph_identifier).serialize(format=format))
             response.headers["Content-Type"] = content_type
         else:
-            response = make_response('Graph %s not found' % graph_uri, 404)
+            response = make_response('Graph %s not found' % graph_identifier, 404)
+
     return response
 
 @endpoint.route("/graph-store", methods=["GET", "PUT", "POST", "DELETE"]) # HEAD is done by flask via GET
-def graph_store_indirect_get():
-    
-    graph_uri = request.values.get("graph", None)
-    default = request.values.get("default", None)
-
+def graph_store_indirect():
     if 'default' in request.values:
-        graph_uri = rdflib.Dataset.DEFAULT
+        graph_identifier = DEFAULT
     elif 'graph' in request.values:
-        graph_uri = rdflib.URIRef(request.values['graph'])
+        graph_identifier = rdflib.URIRef(request.values['graph'])
     else:
-        graph_uri = None
+        graph_identifier = None
 
-    return graph_store_do(graph_uri)
+    return graph_store_do(graph_identifier)
 
 @endpoint.route("/graph-store/<path:path>", methods=["GET", "POST", "PUT", "DELETE"]) # HEAD is done by flask via GET
-def graph_store_direct_put(path):
-    graph_uri = rdflib.URIRef(request.url)
+def graph_store_direct(path):
+    graph_identifier = rdflib.URIRef(request.url)
 
-    return graph_store_do(graph_uri)
+    return graph_store_do(graph_identifier)
 
 
 @endpoint.route("/")
