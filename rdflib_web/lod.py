@@ -4,7 +4,7 @@ it also includes a SPARQL 1.0 Endpoint
 
 The application can be started from commandline:
 
-  python -m rdfextras_web.lod <RDF-file>
+  python -m rdflib_web.lod <RDF-file>
 
 and the file will be served from http://localhost:5000
 
@@ -41,7 +41,7 @@ from jinja2 import contextfilter, Markup
 from .endpoint import endpoint as lod
 from . import mimeutils
 
-from rdfextras_web.caches import lfu_cache
+from rdflib_web.caches import lfu_cache
 
 POSSIBLE_DOT=["/usr/bin/dot", "/usr/local/bin/dot", "/opt/local/bin/dot"]
 for x in POSSIBLE_DOT:

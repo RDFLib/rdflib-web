@@ -4,7 +4,7 @@ confirming to the SPARQL 1.0 Protocol.
 
 The application can be started from commandline:
 
-  python -m rdfextras_web.endpoint <RDF-file>
+  python -m rdflib_web.endpoint <RDF-file>
 
 and the file will be served from http://localhost:5000
 
@@ -31,7 +31,7 @@ from . import __version__
 endpoint = Flask(__name__)
 
 endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
-endpoint.jinja_env.globals["rdfextras_web_version"]=__version__
+endpoint.jinja_env.globals["rdflib_web_version"]=__version__
 endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
 

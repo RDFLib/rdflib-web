@@ -39,15 +39,15 @@ def find_version(filename):
         if version_match:
             return version_match.group(1)
 
-__version__ = find_version('rdfextras_web/__init__.py')
+__version__ = find_version('rdflib_web/__init__.py')
 
 config = dict(
-    name = 'rdfextras-web',
+    name = 'rdflib-web',
     version = __version__,
     description = "RDFLib Web Apps.",
     author = "Gunnar Aastrand Grimnes",
     author_email = "gromgull@gmail.com",
-    url = "https://github.com/RDFLib/rdfextras-web",
+    url = "https://github.com/RDFLib/rdflib-web",
     license = "BSD",
     platforms = ["any"],
     classifiers = ["Programming Language :: Python",
@@ -55,9 +55,9 @@ config = dict(
                    "Topic :: Software Development :: Libraries :: Python Modules",
                    "Operating System :: OS Independent",
                    ],
-    packages = ['rdfextras_web'],
-    package_dir = { 'rdfextras_web': 'rdfextras_web' },
-    package_data = { 'rdfextras_web': ['templates/*.html','static/*',]}
+    packages = ['rdflib_web'],
+    package_dir = { 'rdflib_web': 'rdflib_web' },
+    package_data = { 'rdflib_web': ['templates/*.html','static/*',]}
 )
 
 if sys.version_info[0] >= 3:
@@ -88,14 +88,14 @@ extras_require = {
 config.update(
     entry_points = {
         'console_scripts': [
-            'rdfsparqlapp = rdfextras_web.endpoint:main',
-            'rdflodapp = rdfextras_web.lod:main',                
+            'rdfsparqlapp = rdflib_web.endpoint:main',
+            'rdflodapp = rdflib_web.lod:main',                
         ],
         'rdf.plugins.serializer': [
-            'html = rdfextras_web.htmlresults:HTMLSerializer',
+            'html = rdflib_web.htmlresults:HTMLSerializer',
         ],
         'rdf.plugins.resultserializer': [
-            'html = rdfextras_web.htmlresults:HTMLResultSerializer',
+            'html = rdflib_web.htmlresults:HTMLResultSerializer',
         ],
 
     },

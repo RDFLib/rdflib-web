@@ -3,7 +3,7 @@
 import unittest
 import threading
 import rdflib
-import rdfextras_web.endpoint
+import rdflib_web.endpoint
 
 
 class TestSPARQLStore(unittest.TestCase): 
@@ -19,7 +19,7 @@ class TestSPARQLStore(unittest.TestCase):
 
         # # create our own SPARQL endpoint
 
-        app=rdfextras_web.endpoint.get(g)
+        app=rdflib_web.endpoint.get(g)
         t=threading.Thread(target=lambda : app.run(port=57234))
         t.daemon=True
         t.start()
