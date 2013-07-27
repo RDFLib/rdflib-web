@@ -1,0 +1,6 @@
+This directory contains a copy of
+    http://www.w3.org/2009/sparql/docs/tests/data-sparql11/http-rdf-update/
+The test ../test_graphstore-protocol.py extracts the test from this
+file and runs them.
+
+See also: http://www.w3.org/2009/sparql/docs/tests/README.html
