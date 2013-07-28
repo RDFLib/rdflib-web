@@ -1,5 +1,5 @@
 """
-This is a Flask web-app for a SPARQL Endpoint 
+This is a Flask web-app for a SPARQL Endpoint
 confirming to the SPARQL 1.0 Protocol.
 
 The application can be started from commandline:
@@ -37,7 +37,7 @@ endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sy
 
 @endpoint.route("/sparql", methods=['GET', 'POST'])
 def query():
-    try: 
+    try:
         q=request.values["query"]
 
         a=request.headers["Accept"]
@@ -45,11 +45,11 @@ def query():
         format="xml" # xml is default
         if mimeutils.HTML_MIME in a:
             format="html"
-        if mimeutils.JSON_MIME in a: 
+        if mimeutils.JSON_MIME in a:
             format="json"
 
         # output parameter overrides header
-        format=request.values.get("output", format) 
+        format=request.values.get("output", format)
 
         mimetype=mimeutils.resultformat_to_mime(format)
 
@@ -57,20 +57,20 @@ def query():
         mimetype=request.values.get("force-accept", mimetype)
 
         # pretty=None
-        # if "force-accept" in request.values: 
+        # if "force-accept" in request.values:
         #     pretty=True
 
         # default-graph-uri
 
         results=g.graph.query(q).serialize(format=format)
-        if format=='html':            
+        if format=='html':
             response=make_response(render_template("results.html", results=Markup(unicode(results,"utf-8")), q=q))
         else:
             response=make_response(results)
 
         response.headers["Content-Type"]=mimetype
         return response
-    except: 
+    except:
         return "<pre>"+traceback.format_exc()+"</pre>", 400
 
 
@@ -84,11 +84,11 @@ def __register_namespaces():
         htmlresults.nm.bind(p,ns,override=True)
 
 @endpoint.before_request
-def __start(): 
+def __start():
     g.start=time.time()
 
 @endpoint.after_request
-def __end(response): 
+def __end(response):
     diff = time.time() - g.start
     if response.response and response.content_type.startswith("text/html") and response.status_code==200:
         response.response[0]=response.response[0].replace('__EXECUTION_TIME__', "%.3f"%diff)
@@ -120,16 +120,16 @@ def get(graph_):
     return endpoint
 
 
-def _main(g, out, opts): 
-    import rdflib    
+def _main(g, out, opts):
+    import rdflib
     import sys
     if len(g)==0:
         import bookdb
         g=bookdb.bookdb
-    
+
     serve(g, True)
 
-def main(): 
+def main():
     from rdflib.extras.cmdlineutils import main as cmdmain
     cmdmain(_main, stdin=False)
 

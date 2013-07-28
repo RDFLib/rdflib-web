@@ -18,8 +18,8 @@
 
   <span class='url'>{{resource}}</span>
 </h1>
-is-a 
-<span id="typelist">	
+is-a
+<span id="typelist">
 	{% for t in types %}
 	{{utils.term(t)}}
 	{% if t.realurl.__str__() == "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property" %}
