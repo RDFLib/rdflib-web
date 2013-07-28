@@ -20,14 +20,14 @@ Click the stars in the list below to deselect individual resources.
 {% endif %}
 </ul>
 
-<a href="{{url_for('picked', action='clear')}}"><img src="{{url_for('static', filename='star_inactive.png')}}" />clear all</a>
-<a href="{{url_for('picked', action='all')}}"><img src="{{url_for('static', filename='star_active.png')}}" />select all</a>
+<a href="{{url_for('lod.picked', action='clear')}}"><img src="{{url_for('static', filename='star_inactive.png')}}" />clear all</a>
+<a href="{{url_for('lod.picked', action='all')}}"><img src="{{url_for('static', filename='star_active.png')}}" />select all</a>
 
 
 <div class='inlinelist'><h2>Download as:</h2>
 <ul class='inlinelist'>
 {% for f in ("xml", "turtle", "nt") %}
-  <li><a href="{{url_for('picked', action='download', format_=f)}}">{{f}}</a></li>
+  <li><a href="{{url_for('lod.picked', action='download', format_=f)}}">{{f}}</a></li>
 {% endfor %}
 </ul>
 <br />
@@ -37,7 +37,7 @@ Click the stars in the list below to deselect individual resources.
     <p>Draw the RDF graph.</p>
 <ul class='inlinelist'>
 {% for f in ("png","svg","pdf","dot") %}
-  <li><a href="{{url_for('picked', action='rdfgraph', format_=f)}}">{{f}}</a></li>
+  <li><a href="{{url_for('lod.picked', action='rdfgraph', format_=f)}}">{{f}}</a></li>
 {% endfor %}
 </ul>
 <br />
@@ -47,7 +47,7 @@ Click the stars in the list below to deselect individual resources.
     <p>Draw the a diagram of the RDFS Classes and Properties, if you did not select any - the graph may be empty!</p>
 <ul class='inlinelist'>
 {% for f in ("png","svg","pdf","dot") %}
-  <li><a href="{{url_for('picked', action='rdfsgraph', format_=f)}}">{{f}}</a></li>
+  <li><a href="{{url_for('lod.picked', action='rdfsgraph', format_=f)}}">{{f}}</a></li>
 {% endfor %}
 </ul>
 <br />

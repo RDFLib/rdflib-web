@@ -1,19 +1,27 @@
 """
-This is a Flask web-app for a SPARQL Endpoint
+This is a Flask Blueprint for a SPARQL Endpoint
 confirming to the SPARQL 1.0 Protocol.
 
-The application can be started from commandline:
+You can add the blueprint `endpoint` object to your own application::
+
+  from rdflib_web.endpoint import endpoint
+  app = Flask(__name__)
+  ...
+  app.config['graph'] = my_rdflib_graph
+  app.register_blueprint(endpoint)
+
+Or the application can be started from commandline::
 
   python -m rdflib_web.endpoint <RDF-file>
 
-and the file will be served from http://localhost:5000
+and the endpoint will be available at http://localhost:5000
 
 You can also start the server from your application by calling the :py:func:`serve` method
 or get the application object yourself by called :py:func:`get` function
 
 """
 try:
-    from flask import Flask, render_template, request, make_response, Markup, g
+    from flask import Blueprint, Flask, current_app, render_template, request, make_response, Markup, g
 except:
     raise Exception("Flask not found - install with 'easy_install flask'")
 
@@ -25,14 +33,19 @@ import traceback
 
 import mimeutils
 
-from . import htmlresults
-from . import __version__
+from rdflib_web import htmlresults
+from rdflib_web import __version__
 
-endpoint = Flask(__name__)
+endpoint = Blueprint('sparql_endpoint', __name__)
 
-endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
-endpoint.jinja_env.globals["rdflib_web_version"]=__version__
-endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
+@endpoint.record
+def setup(state):
+    """Do a bit of application configuration"""
+
+    state.app.jinja_env.globals["rdflib_version"]=rdflib.__version__
+    state.app.jinja_env.globals["rdflib_web_version"]=__version__
+    state.app.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
+    state.app.before_first_request(__register_namespaces)
 
 
 @endpoint.route("/sparql", methods=['GET', 'POST'])
@@ -74,13 +87,13 @@ def query():
         return "<pre>"+traceback.format_exc()+"</pre>", 400
 
 
-@endpoint.route("/")
+#@endpoint.route("/") # bound later
 def index():
     return render_template("index.html")
 
-@endpoint.before_first_request    
-def __register_namespaces(): 
-    for p,ns in endpoint.config["graph"].namespaces():
+
+def __register_namespaces():
+    for p,ns in current_app.config["graph"].namespaces():
         htmlresults.nm.bind(p,ns,override=True)
 
 @endpoint.before_request
@@ -103,21 +116,25 @@ def serve(graph_,debug=False):
     a.run(debug=debug)
     return a
 
-@endpoint.before_request
+@endpoint.before_app_request
 def _set_graph():
     """ This sets the g.graph if we are using a static graph
     set in the configuration"""
-    if "graph" in endpoint.config and endpoint.config["graph"]!=None: 
-        g.graph=endpoint.config["graph"]
+    if "graph" in current_app.config and current_app.config["graph"]!=None:
+        g.graph=current_app.config["graph"]
 
 
 def get(graph_):
     """
     Get the LOD Flask App setup to serve the given graph
     """
+    app = Flask(__name__)
+    app.config["graph"]=graph_
 
-    endpoint.config["graph"]=graph_
-    return endpoint
+    app.register_blueprint(endpoint)
+    app.add_url_rule('/', 'index', index)
+
+    return app
 
 
 def _main(g, out, opts):

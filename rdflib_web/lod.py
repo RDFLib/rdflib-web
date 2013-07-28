@@ -1,8 +1,16 @@
 """
 This is a Flask web-app for a simple Linked Open Data Web-app
-it also includes a SPARQL 1.0 Endpoint
+it also includes a SPARQL 1.0 Endpoint.
 
-The application can be started from commandline:
+You can add the blueprint `lod` object to your own application::
+
+  from rdflib_web.lod import lod
+  app = Flask(__name__)
+  ...
+  app.config['graph'] = my_rdflib_graph
+  app.register_blueprint(lod)
+
+Or the application can be started from commandline:
 
   python -m rdflib_web.lod <RDF-file>
 
@@ -31,17 +39,20 @@ import rdflib.util as util
 from rdflib.tools import rdfs2dot, rdf2dot
 
 
-from flask import render_template, request, make_response, redirect, url_for, g, Response, session
+from flask import Flask, Blueprint, render_template, request, \
+    make_response, redirect, url_for, g, Response, session, current_app
 
 from werkzeug.routing import BaseConverter
 from werkzeug.urls import url_quote
 
 from jinja2 import contextfilter, Markup
 
-from .endpoint import endpoint as lod
-from . import mimeutils
+from rdflib_web.endpoint import endpoint
+from rdflib_web import mimeutils
 
 from rdflib_web.caches import lfu_cache
+
+lod = Blueprint('lod', __name__)
 
 POSSIBLE_DOT=["/usr/bin/dot", "/usr/local/bin/dot", "/opt/local/bin/dot"]
 for x in POSSIBLE_DOT:
@@ -76,9 +87,36 @@ def termdict_link(ctx, t):
 def is_rdf_node(t):
     return isinstance(t, rdflib.term.Node)
 
-lod.url_map.converters['rdf'] = RDFUrlConverter
-lod.jinja_env.filters["term"]=termdict_link
-lod.jinja_env.tests["rdf_node"]=is_rdf_node
+@lod.record
+def setup_lod(state):
+    app = state.app
+
+    app.url_map.converters['rdf'] = RDFUrlConverter
+    app.jinja_env.filters["term"]=termdict_link
+    app.jinja_env.tests["rdf_node"]=is_rdf_node
+
+    graph = app.config['graph']
+
+    types = app.config.get('types', 'auto')
+
+    foundtypes, resource_types=_find_types(graph)
+    if types=='auto':
+        app.config["types"]=foundtypes
+    elif types==None:
+        app.config["types"]={None:None}
+    else:
+        app.config["types"]=types
+
+    app.config["resource_types"]=resource_types
+
+    app.config["rtypes"]=_reverse_types(app.config["types"])
+
+    app.config["resources"]=_find_resources(graph, app.config['types'])
+    app.config["rresources"]=_reverse_resources(app.config["resources"])
+
+    app.config["labels"]=_find_labels(graph, app.config["resources"],
+                                      app.config.get('label_properties', LABEL_PROPERTIES))
+
 
 LABEL_PROPERTIES=[RDFS.label,
                   rdflib.URIRef("http://purl.org/dc/elements/1.1/title"),
@@ -106,26 +144,26 @@ def resolve(r):
 
     t=None
     localurl=None
-    if lod.config["types"]=={None: None}:
-        if lod.config["resource_types"][r] in g.graph:
-            localurl=url_for("resource", label=lod.config["resources"][None][r])
+    if current_app.config["types"]=={None: None}:
+        if current_app.config["resource_types"][r] in g.graph:
+            localurl=url_for("lod.resource", label=current_app.config["resources"][None][r])
     else:
-        for t in lod.config["resource_types"][r]:
-            if t in lod.config["types"]:
+        for t in current_app.config["resource_types"][r]:
+            if t in current_app.config["types"]:
                 try:
-                    l=lod.config["resources"][t][r].decode("utf8")
-                    localurl=url_for("resource", type_=lod.config["types"][t], label=l)
+                    l=current_app.config["resources"][t][r].decode("utf8")
+                    localurl=url_for("lod.resource", type_=current_app.config["types"][t], label=l)
                     break
                 except KeyError: pass
 
-    types=[ resolve(t) for t in lod.config["resource_types"][r] if t!=r]
+    types=[ resolve(t) for t in current_app.config["resource_types"][r] if t!=r]
 
     return { 'external': not localurl,
              'url': localurl or r,
              'realurl': r,
              'label': get_label(r),
              'type': types,
-             'picked': r in session["picked"]}
+             'picked': unicode(r) in session["picked"]}
 
 def localname(t):
     """standard rdflib qname computer is not quite what we want"""
@@ -136,9 +174,9 @@ def localname(t):
     r=r.replace("%2F", "_")
     return r
 
-def lookup_label(t, graph):
+def _find_label(t, graph, label_props):
     if isinstance(t, rdflib.Literal): return unicode(t)
-    for l in lod.config["label_properties"]:
+    for l in label_props:
         try:
             return graph.objects(t,l).next()
         except StopIteration:
@@ -152,13 +190,13 @@ def lookup_label(t, graph):
 
 def get_label(r):
     try:
-        return lod.config["labels"][r]
+        return current_app.config["labels"][r]
     except:
         try:
             l=urllib2.unquote(localname(r))
         except:
             l=r
-        lod.config["labels"][r]=l
+        current_app.config["labels"][r]=l
         return l
 
 
@@ -166,7 +204,7 @@ def label_to_url(label):
     label=re.sub(re.compile('[^\w ]',re.U), '',label)
     return re.sub(" ", "_", label)
 
-def find_types(graph):
+def _find_types(graph):
     types={}
     resource_types=collections.defaultdict(set)
     types[RDFS.Class]=localname(RDFS.Class)
@@ -180,7 +218,7 @@ def find_types(graph):
 
     return types, resource_types
 
-def reverse_types(types):
+def _reverse_types(types):
     """Generate cache of localname=>type mapping"""
     rtypes={}
     for t,l in types.iteritems():
@@ -196,22 +234,22 @@ def reverse_types(types):
     return rtypes
 
 
-def find_resources(graph):
+def _find_resources(graph, types):
 
     """Build up cache of type=>[resource=>localname]]"""
 
     resources=collections.defaultdict(dict)
 
-    for t in lod.config["types"]:
+    for t in types:
         resources[t]={}
         for x in graph.subjects(RDF.type, t):
             resources[t][x]=_quote(localname(x))
 
-    resources[RDFS.Class].update(lod.config["types"].copy())
+    resources[RDFS.Class].update(types.copy())
 
     return resources
 
-def reverse_resources(resources):
+def _reverse_resources(resources):
     """
     Reverse resource-cache, build up cache
     type=>[localname=>resource]
@@ -234,12 +272,12 @@ def reverse_resources(resources):
 
     return rresources
 
-def find_labels(graph, resources):
+def _find_labels(graph, resources, label_props):
     labels={}
     for t, res in resources.iteritems():
         for r in res:
             if r not in labels:
-                labels[r]=lookup_label(r, graph)
+                labels[r]=_find_label(r, graph, label_props)
     return labels
 
 def _quote(l):
@@ -251,11 +289,11 @@ def _quote(l):
 
 def get_resource(label, type_):
     label=_quote(label)
-    if type_ and type_ not in lod.config["rtypes"]:
+    if type_ and type_ not in current_app.config["rtypes"]:
         return "No such type_ %s"%type_, 404
     try:
-        t=lod.config["rtypes"][type_]
-        return lod.config["rresources"][t][label]
+        t=current_app.config["rtypes"][type_]
+        return current_app.config["rresources"][t][label]
 
     except:
         return "No such resource %s"%label, 404
@@ -305,7 +343,7 @@ def _addTypesLabels(subgraph, graph):
     for o in itertools.chain(subgraph.objects(None,None),subgraph.subjects(None,None)):
         if not isinstance(o, rdflib.term.Node): continue
         addMe+=list(graph.triples((o,RDF.type, None)))
-        for l in lod.config["label_properties"]:
+        for l in current_app.config["label_properties"]:
             if (o, l, None) in graph:
                 addMe+=list(graph.triples((o, l, None)))
                 break
@@ -319,7 +357,7 @@ def _resourceGraph(r):
     graph+=g.graph.triples((r,None,None))
     graph+=g.graph.triples((None,None,r))
 
-    if not "notypes" in request.args and lod.config["add_types_labels"]:
+    if not "notypes" in request.args and current_app.config["add_types_labels"]:
         _addTypesLabels(graph, g.graph)
 
     return graph
@@ -363,13 +401,13 @@ def page(label, type_=None):
 
     outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props])
 
-    types=sorted([ resolve(x) for x in lod.config["resource_types"][r]], key=lambda x: x['label'].lower())
+    types=sorted([ resolve(x) for x in current_app.config["resource_types"][r]], key=lambda x: x['label'].lower())
 
     comments=list(g.graph.objects(r,RDFS.comment))
 
     inprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ])
 
-    picked=r in session["picked"]
+    picked=unicode(r) in session["picked"]
 
     params={ "outprops":outprops,
              "inprops":inprops,
@@ -385,7 +423,7 @@ def page(label, type_=None):
 
     if r==RDF.Property:
         # page for all properties
-        roots=util.find_roots(g.graph, RDFS.subPropertyOf, set(lod.config["resources"][r]))
+        roots=util.find_roots(g.graph, RDFS.subPropertyOf, set(current_app.config["resources"][r]))
         roots=sorted(roots, key=lambda x: get_label(x).lower())
         params["properties"]=[util.get_tree(g.graph, root, RDFS.subPropertyOf, resolve, lambda x: x[0]['label'].lower()) for root in roots]
 
@@ -395,7 +433,7 @@ def page(label, type_=None):
 
 
         p="properties.html"
-    elif RDF.Property in lod.config["resource_types"][r]:
+    elif RDF.Property in current_app.config["resource_types"][r]:
         # a single property
 
         params["properties"]=[util.get_tree(g.graph, r, RDFS.subPropertyOf, resolve)]
@@ -415,7 +453,7 @@ def page(label, type_=None):
         p="property.html"
     elif r==RDFS.Class or r==rdflib.OWL.Class:
         # page for all classes
-        roots=util.find_roots(g.graph, RDFS.subClassOf, set(lod.config["types"]))
+        roots=util.find_roots(g.graph, RDFS.subClassOf, set(current_app.config["types"]))
         roots=sorted(roots, key=lambda x: get_label(x).lower())
         params["classes"]=[util.get_tree(g.graph, root, RDFS.subClassOf, resolve, sortkey=lambda x: x[0]['label'].lower()) for root in roots]
 
@@ -425,7 +463,7 @@ def page(label, type_=None):
             if x[1]["url"]==RDF.type:
                 inprops.remove(x)
 
-    elif RDFS.Class in lod.config["resource_types"][r] or rdflib.OWL.Class in lod.config["resource_types"][r]:
+    elif RDFS.Class in current_app.config["resource_types"][r] or rdflib.OWL.Class in current_app.config["resource_types"][r]:
         # page for a single class
 
         params["classes"]=[util.get_tree(g.graph, r, RDFS.subClassOf, resolve)]
@@ -466,10 +504,10 @@ def resource(label, type_=None):
         mimeutils.NTRIPLES_MIME, mimeutils.HTML_MIME], request.headers.get("Accept"))
 
     if mimetype and mimetype!=mimeutils.HTML_MIME:
-        path="data"
+        path="lod.data"
         ext="."+mimeutils.mime_to_format(mimetype)
     else:
-        path="page"
+        path="lod.page"
         ext=""
 
     if type_:
@@ -487,22 +525,22 @@ def resource(label, type_=None):
 
 
 
-@lod.route("/")
+#@lod.route("/lodindex") # bound later
 def index():
 
     return render_template("lodindex.html")
 
 @lod.route("/instances")
 def instances():
-    types=sorted([resolve(x) for x in lod.config["types"]], key=lambda x: x['label'].lower())
+    types=sorted([resolve(x) for x in current_app.config["types"]], key=lambda x: x['label'].lower())
     resources={}
     for t in types:
         turl=t["realurl"]
-        resources[turl]=sorted([resolve(x) for x in lod.config["resources"][turl]][:10],
+        resources[turl]=sorted([resolve(x) for x in current_app.config["resources"][turl]][:10],
             key=lambda x: x.get('label').lower())
-        if len(lod.config["resources"][turl])>10:
+        if len(current_app.config["resources"][turl])>10:
             resources[turl].append({ 'url': t["url"], 'external': False, 'label': "..." })
-        t["count"]=len(lod.config["resources"][turl])
+        t["count"]=len(current_app.config["resources"][turl])
 
     return render_template("instances.html",
                            types=types,
@@ -517,7 +555,7 @@ def search():
     results=[]
     found=set()
 
-    for resource, label in lod.config["labels"].iteritems():
+    for resource, label in current_app.config["labels"].iteritems():
         r=re.compile("\W%s\W"%re.escape(searchterm), re.I)
         if r.search(label):
             results.append(resolve(resource))
@@ -526,7 +564,7 @@ def search():
 
     results.sort(key=lambda x: x["label"].lower())
 
-    for resource, label in lod.config["labels"].iteritems():
+    for resource, label in current_app.config["labels"].iteritems():
         if len(results)>offset+10: break
 
         r=re.compile("%s"%re.escape(searchterm), re.I)
@@ -545,11 +583,15 @@ def search():
 @lod.before_request
 def setupSession():
     if "picked" not in session:
-        session["picked"]=set()
+        session["picked"]={}
 
 @lod.route("/pick")
 def pick():
-    session["picked"]^=set((rdflib.URIRef(request.args["uri"]),)) # xor
+    u = request.args["uri"]
+    if u in session["picked"]:
+        del session["picked"][u]
+    else:
+        session["picked"][u]=True
     return redirect(request.referrer)
 
 @lod.route("/picked/<action>/<format_>")
@@ -563,10 +605,11 @@ def picked(action=None, format_=None):
             graph.bind(p,ns)
 
         for x in session["picked"]:
+            x = rdflib.URIRef(x)
             graph+=g.graph.triples((x,None,None))
             graph+=g.graph.triples((None,None,x))
 
-        if not "notypes" in request.args and lod.config["add_types_labels"]:
+        if not "notypes" in request.args and current_app.config["add_types_labels"]:
             _addTypesLabels(graph, g.graph)
 
         return graph
@@ -580,13 +623,14 @@ def picked(action=None, format_=None):
     elif action=='rdfsgraph':
         return graphrdfs(pickedgraph(), format_)
     elif action=='clear':
-        session["picked"]=set()
+        session["picked"]={}
         return render_template("picked.html",
                                things=[])
     else:
         if action=='all':
-            for t in lod.config["resources"]:
-                session["picked"]|=set(lod.config["resources"][t])
+            for t in current_app.config["resources"]:
+                for x in current_app.config["resources"][t]:
+                    session["picked"][x]=True
 
         things=sorted([resolve(x) for x in session["picked"]])
         return render_template("picked.html",
@@ -609,38 +653,30 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
     Get the LOD Flask App setup to serve the given graph
     """
 
-    lod.config["graph"]=graph
-    lod.config["dbname"]=dbname
+    app = Flask(__name__)
 
-    lod.config["js"]={ "endpoint": "static", "filename":"lod.js" }
-    lod.config["jssetup"]="lodsetup()"
+    app.config["graph"]=graph
+    app.config["dbname"]=dbname
 
-    lod.config["label_properties"]=label_properties
-    lod.config["hierarchy_properties"]=hierarchy_properties
-    lod.config["add_types_labels"]=add_types_labels
+    app.config['types']=types
 
-    foundtypes, resource_types=find_types(graph)
-    if types=='auto':
-        lod.config["types"]=foundtypes
-    elif types==None:
-        lod.config["types"]={None:None}
-    else:
-        lod.config["types"]=types
+    app.config["js"]={ "endpoint": "static", "filename":"lod.js" }
+    app.config["jssetup"]="lodsetup()"
 
-    lod.config["resource_types"]=resource_types
+    app.config["label_properties"]=label_properties
+    app.config["hierarchy_properties"]=hierarchy_properties
+    app.config["add_types_labels"]=add_types_labels
 
-    lod.config["rtypes"]=reverse_types(lod.config["types"])
+    app.register_blueprint(endpoint)
+    app.register_blueprint(lod)
 
-    lod.config["resources"]=find_resources(graph)
-    lod.config["rresources"]=reverse_resources(lod.config["resources"])
-
-    lod.config["labels"]=find_labels(graph, lod.config["resources"])
+    app.add_url_rule('/', 'index', index)
 
     # make sure we get one session per app
-    lod.config["SESSION_COOKIE_NAME"]="SESSION_"+re.sub('[^a-zA-Z0-9_]','_', str(graph.identifier))
-    lod.secret_key='veryverysecret'+str(graph.identifier)
+    app.config["SESSION_COOKIE_NAME"]="SESSION_"+re.sub('[^a-zA-Z0-9_]','_', str(graph.identifier))
+    app.secret_key='veryverysecret'+str(graph.identifier)
 
-    return lod
+    return app
 
 
 

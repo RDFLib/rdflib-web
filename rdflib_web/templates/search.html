@@ -20,9 +20,9 @@
 </table>
 <div>
 {% if offset>0 %}
-<a href="{{url_for('search', offset=offset-10, searchterm=searchterm)}}">&lt; &lt; previous</a> 
+<a href="{{url_for('lod.search', offset=offset-10, searchterm=searchterm)}}">&lt; &lt; previous</a>
 {% endif %}
-<a href="{{url_for('search', offset=offset+10, searchterm=searchterm)}}">next &gt;&gt;</a>
+<a href="{{url_for('lod.search', offset=offset+10, searchterm=searchterm)}}">next &gt;&gt;</a>
 </div>
 {% endif %}
 

@@ -31,9 +31,9 @@
   {% if withpicker %}
 
 	  {% if t.picked %}
-	  <a class='picker' style="display: inline" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
+	  <a class='picker' style="display: inline" href="{{url_for('lod.pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
 	  {% else %}
-	  <a class='picker hidden' style="display: none" href="{{url_for('pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
+	  <a class='picker hidden' style="display: none" href="{{url_for('lod.pick', uri=t.realurl)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
 	  {% endif %}
    {% endif %}
 </span>

@@ -17,15 +17,15 @@
 <p>You can download this entire dataset as:
 
 <ul>
-  <li><a href="{{url_for("download", format_="xml") }}">RDF/XML</a></li>
-  <li><a href="{{url_for("download", format_="n3") }}">N3</a></li>
-  <li><a href="{{url_for("download", format_="nt") }}">N-Triples</a></li>
+  <li><a href="{{url_for("lod.download", format_="xml") }}">RDF/XML</a></li>
+  <li><a href="{{url_for("lod.download", format_="n3") }}">N3</a></li>
+  <li><a href="{{url_for("lod.download", format_="nt") }}">N-Triples</a></li>
 </ul>
 <hr/>
 
 {% block query %}
 <h2><a name='query'>Query:</a></h2>
-    <form action="{{url_for("query")}}" name="query" method="GET">
+    <form action="{{url_for("sparql_endpoint.query")}}" name="query" method="GET">
       <textarea rows="10" cols="80" name="query">
 PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
 PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;

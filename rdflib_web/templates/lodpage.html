@@ -11,9 +11,9 @@
 
   {{label}}
 {% if picked %}
-<a href="{{url_for('pick', uri=resource)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
+<a href="{{url_for('lod.pick', uri=resource)}}"><img src="{{url_for('static', filename='star_active.png')}}" /></a>
 {% else %}
-<a href="{{url_for('pick', uri=resource)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
+<a href="{{url_for('lod.pick', uri=resource)}}"><img src="{{url_for('static', filename='star_inactive.png')}}" /></a>
 {% endif %}
 
   <span class='url'>{{resource}}</span>
@@ -74,30 +74,30 @@ is-a
 
 <div id="footermenu">
 
-Download as: 
+Download as:
 {% if type_ %}
-<a href="{{url_for('data', type_=type_, label=urilabel, format_='nt') }}">ntriples</a> |
-<a href="{{url_for('data', type_=type_, label=urilabel, format_='turtle') }}">turtle</a> |
-<a href="{{url_for('data', type_=type_, label=urilabel, format_='xml') }}">rdf/xml</a> | 
-<a href="{{url_for('data', type_=type_, label=urilabel, format_='json') }}">json-ld</a>
+<a href="{{url_for('lod.data', type_=type_, label=urilabel, format_='nt') }}">ntriples</a> |
+<a href="{{url_for('lod.data', type_=type_, label=urilabel, format_='turtle') }}">turtle</a> |
+<a href="{{url_for('lod.data', type_=type_, label=urilabel, format_='xml') }}">rdf/xml</a> |
+<a href="{{url_for('lod.data', type_=type_, label=urilabel, format_='json') }}">json-ld</a>
 Graph:
-<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='png') }}">png</a> | 
-<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='pdf') }}">pdf</a> | 
-<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='svg') }}">svg</a> | 
-<a href="{{url_for('rdfgraph', type_=type_, label=urilabel, format_='dot') }}">dot</a> 
+<a href="{{url_for('lod.rdfgraph', type_=type_, label=urilabel, format_='png') }}">png</a> |
+<a href="{{url_for('lod.rdfgraph', type_=type_, label=urilabel, format_='pdf') }}">pdf</a> |
+<a href="{{url_for('lod.rdfgraph', type_=type_, label=urilabel, format_='svg') }}">svg</a> |
+<a href="{{url_for('lod.rdfgraph', type_=type_, label=urilabel, format_='dot') }}">dot</a>
 
-{% else %}         
+{% else %}
 
-<a href="{{url_for('data', label=urilabel, format_='nt') }}">ntriples</a> |
-<a href="{{url_for('data', label=urilabel, format_='n3') }}">n3</a> |
-<a href="{{url_for('data', label=urilabel, format_='xml') }}">rdf/xml</a> |
-<a href="{{url_for('data', label=urilabel, format_='json') }}">json-ld</a>
-| 
+<a href="{{url_for('lod.data', label=urilabel, format_='nt') }}">ntriples</a> |
+<a href="{{url_for('lod.data', label=urilabel, format_='n3') }}">n3</a> |
+<a href="{{url_for('lod.data', label=urilabel, format_='xml') }}">rdf/xml</a> |
+<a href="{{url_for('lod.data', label=urilabel, format_='json') }}">json-ld</a>
+|
 Graph:
-<a href="{{url_for('rdfgraph', label=urilabel, format_='png') }}">png</a> | 
-<a href="{{url_for('rdfgraph', label=urilabel, format_='pdf') }}">pdf</a> | 
-<a href="{{url_for('rdfgraph', label=urilabel, format_='svg') }}">svg</a> | 
-<a href="{{url_for('rdfgraph', label=urilabel, format_='dot') }}">dot</a> 
+<a href="{{url_for('lod.rdfgraph', label=urilabel, format_='png') }}">png</a> |
+<a href="{{url_for('lod.rdfgraph', label=urilabel, format_='pdf') }}">pdf</a> |
+<a href="{{url_for('lod.rdfgraph', label=urilabel, format_='svg') }}">svg</a> |
+<a href="{{url_for('lod.rdfgraph', label=urilabel, format_='dot') }}">dot</a>
 
 {% endif %}
 </div>
