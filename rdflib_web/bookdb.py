@@ -1,3 +1,7 @@
+"""
+A tiny test graph with Book meta-data
+"""
+
 import rdflib
 import StringIO
 
@@ -8,7 +12,7 @@ bookrdf="""
 @prefix dc: <http://purl.org/dc/elements/1.1/> .
 @prefix vcard: <http://www.w3.org/2001/vcard-rdf/3.0#> .
 
-<http://example.org/book/book1> a book:Book ; 
+<http://example.org/book/book1> a book:Book ;
     dc:creator "J.K. Rowling";
     dc:title "Harry Potter and the Philosopher\'s Stone" .
 
@@ -34,12 +38,12 @@ bookrdf="""
     dc:creator "J.K. Rowling";
     dc:title "Harry Potter and the Deathly Hallows" .
 
-<http://example.org/book/b\xc3\xb6\xc3\xb6k8> a book:Book ; 
-    dc:creator "Moosy"; 
-    dc:title "Moose bite can b\xc3\xb6 very nasty."@se ; 
+<http://example.org/book/b\xc3\xb6\xc3\xb6k8> a book:Book ;
+    dc:creator "Moosy";
+    dc:title "Moose bite can b\xc3\xb6 very nasty."@se ;
     dc:title "Elgbitt kan v\xc3\xa6re veldig vondt."@no ; .
 
-<http://example.org/book/MrsRowling> a book:Person ; 
+<http://example.org/book/MrsRowling> a book:Person ;
     vcard:Family "Rowling";
     vcard:Given "Joanna" .
 
@@ -47,20 +51,20 @@ book:Work a rdfs:Class ;
     rdfs:label "Work" .
 
 book:Publication a rdfs:Class ;
-    rdfs:label "Publication" . 
+    rdfs:label "Publication" .
 
-book:Book a rdfs:Class ; 
+book:Book a rdfs:Class ;
     rdfs:subClassOf book:Work, book:Publication ;
     rdfs:label "Book" .
 
-dc:creator a rdf:Property ; 
-    rdfs:label "creator" ; 
+dc:creator a rdf:Property ;
+    rdfs:label "creator" ;
     rdfs:domain book:Book .
 
-book:author a rdf:Property ; 
-    rdfs:label "author" ; 
+book:author a rdf:Property ;
+    rdfs:label "author" ;
     rdfs:domain book:Book ;
-    rdfs:subPropertyOf dc:creator . 
+    rdfs:subPropertyOf dc:creator .
 
 
 """

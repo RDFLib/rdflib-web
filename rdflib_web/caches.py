@@ -1,3 +1,9 @@
+"""
+
+LRU and LFU Caching decorators taken from py3.2
+
+"""
+
 import collections
 import functools
 
@@ -76,9 +82,9 @@ def lfu_cache(maxsize=100):
                     for key, _ in nsmallest(maxsize // 10,
                                             use_count.iteritems(),
                                             key=itemgetter(1)):
-                        try: 
+                        try:
                             del cache[key], use_count[key]
-                        except: 
+                        except:
                             pass
 
             return result

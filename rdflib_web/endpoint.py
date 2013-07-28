@@ -1,6 +1,5 @@
-"""
-This is a Flask Blueprint for a SPARQL Endpoint
-confirming to the SPARQL 1.0 Protocol.
+"""This is a Flask Blueprint for a ``SPARQL Endpoint`` confirming to the
+`SPARQL 1.0 Protocol <http://www.w3.org/TR/rdf-sparql-protocol/>`_.
 
 You can add the blueprint `endpoint` object to your own application::
 
@@ -14,7 +13,11 @@ Or the application can be started from commandline::
 
   python -m rdflib_web.endpoint <RDF-file>
 
-and the endpoint will be available at http://localhost:5000
+or if you installed with pip, commands ``rdflodapp`` has been added to your path::
+
+  rdflodapp <RDF-file>
+
+Either way, the endpoint will be available at http://localhost:5000
 
 You can also start the server from your application by calling the :py:func:`serve` method
 or get the application object yourself by called :py:func:`get` function
@@ -36,7 +39,10 @@ import mimeutils
 from rdflib_web import htmlresults
 from rdflib_web import __version__
 
+__all__ = [ 'endpoint', 'get', 'serve' ]
+
 endpoint = Blueprint('sparql_endpoint', __name__)
+"""The Flask Blueprint object for a SPARQL endpoint on top of ``app.config["graph"]``"""
 
 @endpoint.record
 def setup(state):

@@ -1,6 +1,6 @@
 """
 This is a Flask web-app for a simple Linked Open Data Web-app
-it also includes a SPARQL 1.0 Endpoint.
+it also includes a ``SPARQL 1.0 Endpoint``.
 
 You can add the blueprint `lod` object to your own application::
 
@@ -10,11 +10,15 @@ You can add the blueprint `lod` object to your own application::
   app.config['graph'] = my_rdflib_graph
   app.register_blueprint(lod)
 
-Or the application can be started from commandline:
+Or the application can be started from commandline::
 
   python -m rdflib_web.lod <RDF-file>
 
-and the file will be served from http://localhost:5000
+or if you installed with pip, commands ``rdflodapp`` has been added to your path::
+
+  rdflodapp <RDF-file>
+
+Either way, the file will be served from http://localhost:5000
 
 You can also start the server from your application by calling the :py:func:`serve` method
 or get the application object yourself by called :py:func:`get` function
@@ -52,7 +56,11 @@ from rdflib_web import mimeutils
 
 from rdflib_web.caches import lfu_cache
 
+__all__ = ['lod', 'get', 'serve' ]
+
 lod = Blueprint('lod', __name__)
+"""The Flask Blueprint object for a LOD Application on top of
+``app.config["graph"]``. See :py:func:`get` for further configuration options."""
 
 POSSIBLE_DOT=["/usr/bin/dot", "/usr/local/bin/dot", "/opt/local/bin/dot"]
 for x in POSSIBLE_DOT:
