@@ -1,4 +1,5 @@
 import rdflib
+import mimeutils
 
 class DefaultGraphReadOnly(Exception):
     pass
@@ -28,17 +29,82 @@ class GenericEndpoint:
     DEFAULT = 'DEFAULT'
 
     RESULT_GRAPH = 0
+    RESULT_SPARQL = 1
 
     def negotiate(self, resulttype, accept_header):
         #TODO: Find all mimetypes supported by the serializers
         #automatically instead of hardcoded
-        import logging
         if resulttype == self.RESULT_GRAPH:
             available = ['application/n-triples', 'text/n3', 'text/turtle', 'application/rdf+xml']
+        elif resulttype == self.RESULT_SPARQL:
+            available = ["text/html", "application/sparql-results+json", "application/sparql-results+xml"]
         assert available, "Invalid resulttype"
-        import mimeutils
         best = mimeutils.best_match(available, accept_header) or available[-1]
         return best, best
+
+    def query(self, method, args, body, mimetype, accept_header):
+        try: 
+            if method == 'POST':
+                if mimetype == "application/x-www-form-urlencoded":
+                    q = body["query"]
+                    default_graph_uri = body.get("default-graph-uri") # request.value would be more tolerant
+                    named_graph_uri = body.get("named-graph-uri") # request.value would be more tolerant
+                elif mimetype == "application/sparql-query":
+                    q = body
+                    default_graph_uri = args.get("default-graph-uri")
+                    named_graph_uri = args.get("named-graph-uri")
+                else:
+                    return (415, dict(), "Media type %s not supported" % mimetype)
+            elif method == 'GET' or method == 'HEAD':
+                    q = args["query"]
+                    default_graph_uri = args.get("default-graph-uri")
+                    named_graph_uri = args.get("named-graph-uri")
+            else:
+                response = (405, {"Allow": "GET, HEAD, POST"}, "Method %s not supported" % method)
+        except KeyError:
+            return (400, dict(), 'Missing obligatory HTTP header or query parameter')
+                
+        default_graph_uri = default_graph_uri and rdflib.URIRef(default_graph_uri)
+        named_graph_uri = named_graph_uri and rdflib.URIRef(named_graph_uri)
+
+        try:
+            # TODO: Can we distinguish between internal error and bad query?
+            # TODO: implement default-graph-uri and named-graph-uri
+            results=self.ds.query(q)
+
+            if results.graph:
+                result_type = self.RESULT_GRAPH
+            else:
+                result_type = self.RESULT_SPARQL
+
+            format, content_type = self.negotiate(result_type, accept_header)
+
+            return (200, {"Content-type": content_type}, results.serialize(format=format))
+        except: 
+            return (400, dict(), "")
+
+    def update(self, method, args, body, mimetype, accept_header):
+        try: 
+            # TODO: *-graph-uri can turn up multiple times
+            if mimetype == "application/x-www-form-urlencoded":
+                q = body["update"]
+                using_graph_uri = body.get("using-graph-uri") # request.value would be more tolerant
+                using_named_graph_uri = body.get("using-named-graph-uri") # request.value would be more tolerant
+            elif mimetype == "application/sparql-update":
+                q = body
+                using_graph_uri = args.get("using-graph-uri")
+                using_named_graph_uri = args.get("using-named-graph-uri")
+            else:
+                return (415, dict(), "Mediatype %s is not supported" % mimetype)
+                
+            using_graph_uri = using_graph_uri and URIRef(using_graph_uri)
+            using_named_graph_uri = using_named_graph_uri and URIRef(using_named_graph_uri)
+
+            self.ds.update(q)
+            return (204, dict(), "")
+        except: 
+            # Blame every error on the client, just because I don't know better.
+            return (400, dict(), "")
 
     def graph_store(self, method, graph_identifier, args, body, mimetype, accept_header):
         """Handles a request according to the SPARQL 1.1 graph store
