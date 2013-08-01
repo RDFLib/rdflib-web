@@ -84,7 +84,6 @@ def graph_store_do(graph_identifier):
             data = data_file.read()
             mt = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
             body.append({'data': data, 'mimetype': mt})
-        response = make_response('', 204)
     else:
         body = request.data
 
