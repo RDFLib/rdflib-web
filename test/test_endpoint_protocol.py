@@ -9,56 +9,99 @@ import httplib
 import rdflib
 import rdflib.compare
 import rdfextras_web.endpoint
+import fileinput
 
-from HTMLParser import HTMLParser
-from htmlentitydefs import name2codepoint
+class _TestSyntaxError(Exception):
+    def __init__(self, filename, lineno, error):
+        super(Exception, self).__init__(
+                "Error in test case %s at line %s: %s" % (filename, lineno, error)
+                )
 
-class TestcaseParser(HTMLParser):
-    def __init__(self):
-        HTMLParser.__init__(self)
+
+class Parser():
+    r_title = re.compile(r"^#(?!#)\s*(.*)")
+    r_test = re.compile("^##(?!#)\s*(.*)")
+    r_request = re.compile("^###\s*request", re.I)
+    r_response = re.compile("^###\s*response", re.I)
+    r_empty = re.compile("^\s*$")
+    r_indent = re.compile("^(\s+)")
+
+    def error(self, message):
+        raise _TestSyntaxError(self.f.filename(), self.f.filelineno(), message)
+
+    def parse(self, filename):
+        self.f = fileinput.input((filename,))
         self.tests = []
-        self.dest = None
-    def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-        if tag == 'h2' and 'id' in attrs:
-            self.tests.append({'name': attrs['id']})
-            self.dest = 'title'
-        elif self.tests and tag=='pre':
-            if self.tests[-1].get('request'):
-                self.dest = 'response'
-            else:
-                self.dest = 'request'
-    def handle_endtag(self, tag):
-        if self.dest:
-            t = self.tests[-1]
-            t[self.dest] = t.get(self.dest, '').strip()
-            self.dest = None
-    def handle_data(self, data):
-        if self.dest:
-            t = self.tests[-1]
-            t[self.dest] = t.get(self.dest, '') + data
-    def handle_entityref(self, name):
-        c = unichr(name2codepoint[name])
-        self.handle_data(c)
-    def handle_charref(self, name):
-        if name.startswith('x'):
-            c = unichr(int(name[1:], 16))
-        else:
-            c = unichr(int(name))
-        self.handle_data(c)
+        self.state = self.title
 
-class TestFailure(Exception):
-    pass
+        for l in self.f:
+            self.state(l)
+
+        if not self.tests:
+            self.error("No tests found")
+        elif not self.tests[-1]['request']:
+            self.error("Expected '### Request'")
+        elif not self.tests[-1]['response']:
+            self.error("Expected '### Response'")
+
+        return self.title, self.tests
+
+    def title(self, l):
+        m = self.r_title.match(l)
+        if m:
+            self.title = m.group(1)
+            self.state = self.test
+        else:
+            self.error("First line must be a title")
+
+    def test(self, l):
+        if l.startswith('#'):
+            m = self.r_test.match(l)
+            if not m:
+                self.error("Expected '##'")
+            test = {'name': m.group(1), 'request': "", 'response': ""}
+            self.tests.append(test)
+            self.state = self.request
+
+    def request(self, l):
+        if l.startswith('#'):
+            m = self.r_request.match(l)
+            if not m:
+                self.error("Expected '### Request'")
+            self.state = lambda l: self.block(l, 'request', self.response)
+
+    def response(self, l):
+        if l.startswith('#'):
+            m = self.r_response.match(l)
+            if not m:
+                self.error("Expected '### Response'")
+            self.state = lambda l: self.block(l, 'response', self.test)
+
+    def block(self, l, field, next_state):
+        if l.startswith('#'):
+            self.error("Expected code block")
+        elif l.rstrip() == '```':
+            self.state = lambda l: self.consume_block(l, field, next_state)
+
+    def consume_block(self, l, field, next_state):
+        if l.rstrip().startswith('```'):
+            self.state = next_state
+        else:
+            self.tests[-1][field] += l
+
+def _test_function_factory(filename):
+    def test_function(self):
+        self.from_file(filename)
+    return test_function
 
 def _discover_tests(directory):
     # Name of this function begins with an underscore because
     # otherwise unittest thinks it is a test.
-    tests = filter(lambda name: name.endswith(".html"), os.listdir(directory))
+    tests = filter(lambda name: name.startswith("test_"), os.listdir(directory))
     def decorator(cls):
         for t in tests:
-            def test_function(self):
-                self.from_file("%s/%s" % (directory, t))
-            setattr(cls, "test_" + t.split('.')[0], test_function)
+            test_function = _test_function_factory("%s/%s" % (directory, t))
+            setattr(cls, t.split('.')[0], test_function)
         return cls
     return decorator
 
@@ -84,13 +127,6 @@ class TestEndpointProtocol(unittest.TestCase):
         import time
         time.sleep(1)
         cls.connection = httplib.HTTPConnection(cls.host, cls.port, timeout=5)
-
-    def setUp(self):
-        # Because of the shared fixture, mess with the endpoint's
-        # internal in order to reset the dataset
-        if "impl" in self.app.config:
-            self.app.config["impl"].ds = rdflib.Dataset()
-        self.newpath = None
 
     def replace_constants(self, s):
         s = s.replace('$GRAPHSTORE$', self.graphstore_path)
@@ -166,7 +202,7 @@ class TestEndpointProtocol(unittest.TestCase):
             return ["Body is:\n{}but should be\n{}".format(received, expected)]
         return []
 
-    def runtest(self, name, title, request, response):
+    def runtest(self, name, request, response):
         logging.info("Prepairing test {}".format(name))
         request = self.replace_constants(request)
         request = self.replace_variables(request)
@@ -204,14 +240,20 @@ class TestEndpointProtocol(unittest.TestCase):
         else:
             logging.info("Test {} passed".format(name))
             return True
-        
-    def from_file(self, filename):
-        testpage = open(filename).read()
 
-        parser = TestcaseParser()
-        parser.feed(testpage)
-        parser.close()
-        tests = parser.tests
+    def from_file(self, filename):
+        parser = Parser()
+        title, tests = parser.parse(filename)
+
+        # Because of the shared fixture, mess with the endpoint's
+        # internal in order to reset the dataset
+        m = re.search(r"\[(.*)\]", title)
+        initExpression = m.group(1) if m else "rdflib.Dataset()"
+        logging.info("Initializing endpoint with `%s`" % initExpression)
+        self.app.config["ds"] = eval(initExpression)
+        if "generic" in self.app.config:
+            self.app.config["generic"].ds = self.app.config["ds"]
+        self.newpath = None
 
         failed_tests = [t['name'] for t in tests if not self.runtest(**t)]
 

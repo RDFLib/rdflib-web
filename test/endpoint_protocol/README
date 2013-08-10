@@ -1,8 +1,0 @@
-This directory contains HTTP based tests described in HTML files.
-../test_endpoint_protocol.py extracts the test from these files and
-runs them.
-
-graphstore_w3c.html is a modified version of
-http://www.w3.org/2009/sparql/docs/tests/data-sparql11/http-rdf-update/
-See also: http://www.w3.org/2009/sparql/docs/tests/README.html
-
