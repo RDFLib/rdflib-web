@@ -1,6 +1,10 @@
 import rdflib
 
-DEFAULT = 'DEFAULT'
+class DefaultGraphReadOnly(Exception):
+    pass
+
+class NamedGraphsNotSupported(Exception):
+    pass
 
 class GenericEndpoint:
     """
@@ -11,13 +15,17 @@ class GenericEndpoint:
 
     def __init__(self, ds, coin_url):
         """
-        :argument:ds: The dataset to be used. Must be a Dataset.
+        :argument:ds: The dataset to be used. Must be a Dataset (recommeded),
+        ConjunctiveGraph or Graph. In case of a Graph, it is served as
+        the default graph.
         :argument:coin_url: A function that takes no arguments and outputs
         an URI for a fresh graph. This is used when graph_identifier is
         None and neither 'default' nor 'graph' can be found in args.
         """
         self.ds = ds
         self.coin_url = coin_url
+
+    DEFAULT = 'DEFAULT'
 
     RESULT_GRAPH = 0
 
@@ -57,10 +65,13 @@ class GenericEndpoint:
         as string. In this case, the caller is responsible to create a
         proper status body. If the status code is 201 or 204, the body
         is None.
+
+        This method can through exceptions. If this happens, it is always an
+        internal error.
         """
         if not graph_identifier:
             if 'default' in args:
-                graph_identifier = DEFAULT
+                graph_identifier = self.DEFAULT
             elif 'graph' in args:
                 graph_identifier = rdflib.URIRef(args['graph'])
             elif method == 'POST':
@@ -68,59 +79,109 @@ class GenericEndpoint:
             else:
                 return (400, dict(), "Missing URL query string parameter 'graph' or 'default'")
 
-        if graph_identifier == DEFAULT:
+        existed = False
+        if graph_identifier == self.DEFAULT:
             existed = True
-        elif graph_identifier:
+        elif graph_identifier and self.ds.context_aware:
             existed = graph_identifier in {g.identifier for g in self.ds.contexts()}
 
         def get_graph(identifier):
-            if graph_identifier == DEFAULT:
-                return self.ds.default_context
-            else:
+            # Creates the graph if it does not already exist and returns
+            # it.
+            if graph_identifier == self.DEFAULT:
+                # A ConjunctiveGraph or Datset itself represents the
+                # default graph (it might be the union of all graphs).
+                # In case of a plain Graph, the default graph is the
+                # graph itself too.
+                return self.ds
+            elif hasattr(self.ds, "graph"): # No Graph.graph_aware
+                return self.ds.graph(identifier)
+            elif self.ds.context_aware:
                 return self.ds.get_context(identifier)
-
-        if method == 'PUT':
-            if existed:
-                self.ds.remove_graph(get_graph(graph_identifier))
-            target = get_graph(graph_identifier)
-            target.parse(data=body, format=mimetype)
-            response = (204 if existed else 201, dict(), None)
-
-        elif method == 'DELETE':
-            if existed:
-                self.ds.remove_graph(get_graph(graph_identifier))
-                response = (204, dict(), None)
             else:
-                response = (404, dict(), 'Graph %s not found' % graph_identifier)
+                raise NamedGraphsNotSupported()
 
-        elif method == 'POST':
-            additional_headers = dict()
-            if not graph_identifier:
-                # Coin a new identifier
-                existed = False
-                url = self.coin_url()
-                graph_identifier = rdflib.URIRef(url)
-                additional_headers['location'] = url
-            target = get_graph(graph_identifier)
-            if mimetype == "multipart/form-data":
-                for post_item in body:
-                    target = get_graph(graph_identifier)
-                    target.parse(data=post_item['data'], format=post_item['mimetype'])
+        def clear_graph(identifier):
+            if identifier == self.DEFAULT:
+                if self.ds.default_union:
+                    raise DefaultGraphReadOnly()
+                elif self.ds.context_aware:
+                    self.ds.default_context.remove((None,None,None))
+                else:
+                    self.ds.remove((None,None,None))
             else:
-                target.parse(data=body, format=mimetype)
-            response = (204 if existed else 201, additional_headers, None)
+                self.ds.remove((None, None, None, get_graph(identifier)))
 
-        elif method == 'GET' or method == 'HEAD':
-            if existed:
-                format, content_type = self.negotiate(self.RESULT_GRAPH, accept_header)
-                if content_type.startswith('text/'): content_type += "; charset=utf-8"
-                headers = {"Content-type": content_type}
-                response = (200, headers, get_graph(graph_identifier).serialize(format=format))
+        def remove_graph(identifier):
+            # Unfortunately, there is no Graph.graph_aware, so use
+            # hasattr
+            if identifier == self.DEFAULT and self.ds.default_union:
+                raise DefaultGraphReadOnly()
+            elif hasattr(self.ds, "remove_graph"):
+                self.ds.remove_graph(get_graph(identifier))
             else:
-                response = (404, dict(), 'Graph %s not found' % graph_identifier)
+                clear_graph(identifier)
 
-        else:
-            response = (405, {"Allow": "GET, HEAD, POST, PUT, DELETE"}, "Method %s not supported" % method)
+        def parseInto(target, data, format):
+            # Makes shure that the for ConjucntiveGraph and Dataset we
+            # parse into the default graph instead of into a fresh
+            # graph.
+            if target.default_union:
+                raise DefaultGraphReadOnly()
+            if target.context_aware:
+                target.default_context.parse(data=data, format=format)
+            else:
+                target.parse(data=data, format=format)
+
+        try:
+
+            if method == 'PUT':
+                if existed:
+                    clear_graph(graph_identifier)
+                target = get_graph(graph_identifier)
+                parseInto(target, data=body, format=mimetype)
+                response = (204 if existed else 201, dict(), None)
+
+            elif method == 'DELETE':
+                if existed:
+                    remove_graph(graph_identifier)
+                    response = (204, dict(), None)
+                else:
+                    response = (404, dict(), 'Graph %s not found' % graph_identifier)
+
+            elif method == 'POST':
+                additional_headers = dict()
+                if not graph_identifier:
+                    # Coin a new identifier
+                    existed = False
+                    url = self.coin_url()
+                    graph_identifier = rdflib.URIRef(url)
+                    additional_headers['location'] = url
+                target = get_graph(graph_identifier)
+                if mimetype == "multipart/form-data":
+                    for post_item in body:
+                        target = get_graph(graph_identifier)
+                        parseInto(target, data=post_item['data'], format=post_item['mimetype'])
+                else:
+                    parseInto(target, data=body, format=mimetype)
+                response = (204 if existed else 201, additional_headers, None)
+
+            elif method == 'GET' or method == 'HEAD':
+                if existed:
+                    format, content_type = self.negotiate(self.RESULT_GRAPH, accept_header)
+                    if content_type.startswith('text/'): content_type += "; charset=utf-8"
+                    headers = {"Content-type": content_type}
+                    response = (200, headers, get_graph(graph_identifier).serialize(format=format))
+                else:
+                    response = (404, dict(), 'Graph %s not found' % graph_identifier)
+
+            else:
+                response = (405, {"Allow": "GET, HEAD, POST, PUT, DELETE"}, "Method %s not supported" % method)
+
+        except DefaultGraphReadOnly:
+            response = (400, dict(), "Default graph is read only because it is the uion")
+        except NamedGraphsNotSupported:
+            response = (400, dict(), "Named graphs not supported")
 
         return response
 

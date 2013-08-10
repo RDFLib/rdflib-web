@@ -33,7 +33,7 @@ endpoint.jinja_env.globals["rdflib_version"]=rdflib.__version__
 endpoint.jinja_env.globals["rdfextras_web_version"]=__version__
 endpoint.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
 
-DEFAULT = generic_endpoint.DEFAULT
+DEFAULT = generic_endpoint.GenericEndpoint.DEFAULT
 
 @endpoint.route("/sparql", methods=['GET', 'POST'])
 def query():
@@ -165,9 +165,7 @@ def _main(g, out, opts):
     import rdflib    
     import sys
     
-    ds = rdflib.Dataset()
-    ds += g
-    serve(ds, True)
+    serve(g, True)
 
 def main(): 
     from rdflib.extras.cmdlineutils import main as cmdmain
