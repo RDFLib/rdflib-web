@@ -24,7 +24,8 @@ or get the application object yourself by called :py:func:`get` function
 
 """
 try:
-    from flask import Blueprint, Flask, current_app, render_template, request, make_response, Markup, g
+    from flask import ( Blueprint, Flask, render_template, request, make_response,
+        Markup, g, url_for, current_app )
 except:
     raise Exception("Flask not found - install with 'easy_install flask'")
 
@@ -38,8 +39,9 @@ import mimeutils
 
 from rdflib_web import htmlresults
 from rdflib_web import __version__
-
+from rdflib_web import generic_endpoint
 __all__ = [ 'endpoint', 'get', 'serve' ]
+
 
 endpoint = Blueprint('sparql_endpoint', __name__)
 """The Flask Blueprint object for a SPARQL endpoint on top of ``app.config["graph"]``"""
@@ -51,8 +53,11 @@ def setup(state):
     state.app.jinja_env.globals["rdflib_version"]=rdflib.__version__
     state.app.jinja_env.globals["rdflib_web_version"]=__version__
     state.app.jinja_env.globals["python_version"]="%d.%d.%d"%(sys.version_info[0], sys.version_info[1], sys.version_info[2])
+    state.app.before_first_request(__create_generic_endpoint)
     state.app.before_first_request(__register_namespaces)
 
+
+DEFAULT = generic_endpoint.GenericEndpoint.DEFAULT
 
 @endpoint.route("/sparql", methods=['GET', 'POST'])
 def query():
@@ -92,15 +97,56 @@ def query():
     except:
         return "<pre>"+traceback.format_exc()+"</pre>", 400
 
+def graph_store_do(graph_identifier):
+    method = request.method
+    mimetype = request.mimetype
+    args = request.args
+    if mimetype == "multipart/form-data":
+        body = []
+        force_mimetype = args.get('mimetype')
+        for _, data_file in request.files.items():
+            data = data_file.read()
+            mt = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
+            body.append({'data': data, 'mimetype': mt})
+    else:
+        body = request.data
+
+    result = g.generic.graph_store(
+        method=method, graph_identifier=graph_identifier, args=args,
+        body=body, mimetype=mimetype,
+        accept_header=request.headers.get("Accept")
+    )
+    code, headers, body = result
+
+    response = make_response(body or '', code)
+    for k, v in headers.items():
+        response.headers[k] = v
+    return response
+
+
+@endpoint.route("/graph-store", methods=["GET", "PUT", "POST", "DELETE"]) # HEAD is done by flask via GET
+def graph_store_indirect():
+    return graph_store_do(None)
+
+@endpoint.route("/graph-store/<path:path>", methods=["GET", "POST", "PUT", "DELETE"]) # HEAD is done by flask via GET
+def graph_store_direct(path):
+    graph_identifier = rdflib.URIRef(request.url)
+    return graph_store_do(graph_identifier)
+
 
 #@endpoint.route("/") # bound later
 def index():
     return render_template("index.html")
 
-
 def __register_namespaces():
-    for p,ns in current_app.config["graph"].namespaces():
+    for p,ns in current_app.config["ds"].namespaces():
         htmlresults.nm.bind(p,ns,override=True)
+
+def __create_generic_endpoint():
+    current_app.config["generic"]=generic_endpoint.GenericEndpoint(
+        ds=current_app.config["ds"],
+        coin_url=lambda: url_for("graph_store_direct", path=str(rdflib.BNode()), _external=True)
+    )
 
 @endpoint.before_request
 def __start():
@@ -115,27 +161,25 @@ def __end(response):
     return response
 
 
-def serve(graph_,debug=False):
-    """Serve the given graph on localhost with the LOD App"""
+def serve(ds,debug=False):
+    """Serve the given dataset on localhost with the LOD App"""
 
-    a=get(graph_)
+    a=get(ds)
     a.run(debug=debug)
     return a
 
 @endpoint.before_app_request
-def _set_graph():
-    """ This sets the g.graph if we are using a static graph
+def _set_generic():
+    """ This sets the g.generic if we are using a static graph
     set in the configuration"""
-    if "graph" in current_app.config and current_app.config["graph"]!=None:
-        g.graph=current_app.config["graph"]
+    g.generic = current_app.config["generic"]
 
-
-def get(graph_):
+def get(ds):
     """
-    Get the LOD Flask App setup to serve the given graph
+    Get the LOD Flask App setup to serve the given dataset
     """
     app = Flask(__name__)
-    app.config["graph"]=graph_
+    app.config["ds"]=ds
 
     app.register_blueprint(endpoint)
     app.add_url_rule('/', 'index', index)
@@ -146,7 +190,8 @@ def get(graph_):
 def _main(g, out, opts):
     import rdflib
     import sys
-    if len(g)==0:
+
+    if 'x' in opts:
         import bookdb
         g=bookdb.bookdb
 
@@ -154,7 +199,7 @@ def _main(g, out, opts):
 
 def main():
     from rdflib.extras.cmdlineutils import main as cmdmain
-    cmdmain(_main, stdin=False)
+    cmdmain(_main, stdin=False, options='x')
 
 if __name__=='__main__':
     main()
