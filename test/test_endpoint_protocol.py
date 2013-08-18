@@ -8,7 +8,7 @@ import urllib
 import httplib
 import rdflib
 import rdflib.compare
-import rdfextras_web.endpoint
+import rdflib_web.endpoint
 import fileinput
 
 class _TestSyntaxError(Exception):
@@ -120,7 +120,7 @@ class TestEndpointProtocol(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         ds=rdflib.Dataset()
-        cls.app=rdfextras_web.endpoint.get(ds)
+        cls.app=rdflib_web.endpoint.get(ds)
         t=threading.Thread(target=lambda : cls.app.run(port=cls.port))
         t.daemon=True
         t.start()
