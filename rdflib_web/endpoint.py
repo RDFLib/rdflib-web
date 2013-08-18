@@ -61,41 +61,51 @@ DEFAULT = generic_endpoint.GenericEndpoint.DEFAULT
 
 @endpoint.route("/sparql", methods=['GET', 'POST'])
 def query():
-    try:
-        q=request.values["query"]
+    method = request.method
+    mimetype = request.mimetype
+    args = request.args
 
-        a=request.headers["Accept"]
+    if mimetype == "application/x-www-form-urlencoded":
+        body = request.form
+    else:
+        body = request.data
 
-        format="xml" # xml is default
-        if mimeutils.HTML_MIME in a:
-            format="html"
-        if mimeutils.JSON_MIME in a:
-            format="json"
+    result = g.generic.query(
+        method=method, args=args,
+        body=body, mimetype=mimetype,
+        accept_header=request.headers.get("Accept")
+    )
+    code, headers, body = result
 
-        # output parameter overrides header
-        format=request.values.get("output", format)
+    response = make_response(body or '', code)
+    for k, v in headers.items():
+        response.headers[k] = v
+    return response
 
-        mimetype=mimeutils.resultformat_to_mime(format)
 
-        # force-accept parameter overrides mimetype
-        mimetype=request.values.get("force-accept", mimetype)
+@endpoint.route("/sparql/update", methods=['GET', 'POST'])
+def update():
+    method = request.method
+    mimetype = request.mimetype
+    args = request.args
 
-        # pretty=None
-        # if "force-accept" in request.values:
-        #     pretty=True
+    if mimetype == "multipart/form-data":
+        body = request.form
+    else:
+        body = request.data
 
-        # default-graph-uri
+    result = g.generic.update(
+        method=method, args=args,
+        body=body, mimetype=mimetype,
+        accept_header=request.headers.get("Accept")
+    )
+    code, headers, body = result
 
-        results=g.generic.ds.query(q).serialize(format=format)
-        if format=='html':
-            response=make_response(render_template("results.html", results=Markup(unicode(results,"utf-8")), q=q))
-        else:
-            response=make_response(results)
+    response = make_response(body or '', code)
+    for k, v in headers.items():
+        response.headers[k] = v
+    return response
 
-        response.headers["Content-Type"]=mimetype
-        return response
-    except:
-        return "<pre>"+traceback.format_exc()+"</pre>", 400
 
 def graph_store_do(graph_identifier):
     method = request.method
