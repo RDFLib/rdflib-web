@@ -139,12 +139,12 @@ def index():
     return render_template("index.html")
 
 def __register_namespaces():
-    for p,ns in current_app.config["ds"].namespaces():
+    for p,ns in current_app.config["graph"].namespaces():
         htmlresults.nm.bind(p,ns,override=True)
 
 def __create_generic_endpoint():
     current_app.config["generic"]=generic_endpoint.GenericEndpoint(
-        ds=current_app.config["ds"],
+        ds=current_app.config["graph"],
         coin_url=lambda: url_for("graph_store_direct", path=str(rdflib.BNode()), _external=True)
     )
 
@@ -173,13 +173,14 @@ def _set_generic():
     """ This sets the g.generic if we are using a static graph
     set in the configuration"""
     g.generic = current_app.config["generic"]
+    g.graph = g.generic.ds
 
 def get(ds):
     """
     Get the LOD Flask App setup to serve the given dataset
     """
     app = Flask(__name__)
-    app.config["ds"]=ds
+    app.config["graph"]=ds
 
     app.register_blueprint(endpoint)
     app.add_url_rule('/', 'index', index)
