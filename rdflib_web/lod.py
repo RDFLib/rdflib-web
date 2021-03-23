@@ -159,7 +159,7 @@ def resolve(r):
         for t in current_app.config["resource_types"][r]:
             if t in current_app.config["types"]:
                 try:
-                    l=current_app.config["resources"][t][r].decode("utf8")
+                    l=current_app.config["resources"][t][r]
                     localurl=url_for("lod.resource", type_=current_app.config["types"][t], label=l)
                     break
                 except KeyError: pass

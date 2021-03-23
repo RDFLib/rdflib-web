@@ -5,3 +5,8 @@ human-readable views of resources.
 
 
 __version__ = "0.1"
+
+from . import lod
+from . import bookdb
+
+app = lod.get(bookdb.bookdb)
