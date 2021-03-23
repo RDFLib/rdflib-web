@@ -289,8 +289,8 @@ def _find_labels(graph, resources, label_props):
     return labels
 
 def _quote(l):
-    if isinstance(l,str):
-        l=l.encode("utf-8")
+    #if isinstance(l,str):
+    #    l=l.encode("utf-8")
     return l
     #return urllib2.quote(l, safe="")
 
@@ -407,7 +407,7 @@ def page(label, type_=None):
                    RDFS.domain, RDFS.range,
                    RDFS.subClassOf, RDFS.subPropertyOf)
 
-    outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props])
+    outprops=[ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props]
 
     types=sorted([ resolve(x) for x in current_app.config["resource_types"][r]], key=lambda x: x['label'].lower())
 
