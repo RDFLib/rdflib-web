@@ -36,7 +36,7 @@ def qname(ctx, t):
             l=ctx["graph"].namespace_manager.compute_qname(t, False)
         else: 
             l=nm.compute_qname(t, False)
-        return u'%s:%s'%(l[0],l[2])
+        return '%s:%s'%(l[0],l[2])
     except: 
         return t
 
@@ -45,7 +45,7 @@ def qname(ctx, t):
 def term_to_string(ctx, t): 
     if isinstance(t, rdflib.URIRef):
         l=qname(ctx,t)
-        return Markup(u"<a href='%s'>%s</a>"%(t,l))
+        return Markup("<a href='%s'>%s</a>"%(t,l))
     elif isinstance(t, rdflib.Literal): 
         if t.language: 
             return '"%s"@%s'%(t,t.language)
@@ -59,7 +59,7 @@ env=Environment()
 env.filters["term_to_string"]=term_to_string
 
 
-GRAPH_TEMPLATE=u"""
+GRAPH_TEMPLATE="""
 <table>
 <thead>
  <tr>
@@ -81,7 +81,7 @@ GRAPH_TEMPLATE=u"""
 
 """
 
-SELECT_TEMPLATE=u"""
+SELECT_TEMPLATE="""
 <table>
 <thead>
  <tr>

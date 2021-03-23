@@ -18,7 +18,7 @@ NTRIPLES_MIME="text/plain"
 JSONLD_MIME="application/json"
 
 FORMAT_MIMETYPE={ "rdf": RDFXML_MIME, "n3": N3_MIME, "nt": NTRIPLES_MIME, "turtle": TURTLE_MIME, "json-ld": JSONLD_MIME }
-MIMETYPE_FORMAT=dict(map(reversed,FORMAT_MIMETYPE.items()))
+MIMETYPE_FORMAT=dict(list(map(reversed,list(FORMAT_MIMETYPE.items()))))
 
 def mime_to_format(mimetype): 
     if mimetype in MIMETYPE_FORMAT:

@@ -35,7 +35,7 @@ import sys
 import time
 import traceback
 
-import mimeutils
+from . import mimeutils
 
 from rdflib_web import htmlresults
 from rdflib_web import __version__
@@ -88,7 +88,7 @@ def query():
 
         results=g.generic.ds.query(q).serialize(format=format)
         if format=='html':
-            response=make_response(render_template("results.html", results=Markup(unicode(results,"utf-8")), q=q))
+            response=make_response(render_template("results.html", results=Markup(str(results,"utf-8")), q=q))
         else:
             response=make_response(results)
 
@@ -104,7 +104,7 @@ def graph_store_do(graph_identifier):
     if mimetype == "multipart/form-data":
         body = []
         force_mimetype = args.get('mimetype')
-        for _, data_file in request.files.items():
+        for _, data_file in list(request.files.items()):
             data = data_file.read()
             mt = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
             body.append({'data': data, 'mimetype': mt})
@@ -119,7 +119,7 @@ def graph_store_do(graph_identifier):
     code, headers, body = result
 
     response = make_response(body or '', code)
-    for k, v in headers.items():
+    for k, v in list(headers.items()):
         response.headers[k] = v
     return response
 
@@ -193,7 +193,7 @@ def _main(g, out, opts):
     import sys
 
     if 'x' in opts:
-        import bookdb
+        from . import bookdb
         g=bookdb.bookdb
 
     serve(g, True)

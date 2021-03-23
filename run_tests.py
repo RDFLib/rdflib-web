@@ -69,18 +69,18 @@ if __name__ == '__main__':
     from sys import argv, exit, stderr
     try: import nose
     except ImportError:
-        print >>stderr, """\
+        print("""\
     Requires Nose. Try:
 
         $ sudo easy_install nose
 
-    Exiting. """; exit(1)
+    Exiting. """, file=stderr); exit(1)
 
 
     if '--with-coverage' in argv + NOSE_ARGS:
         try: import coverage
         except ImportError:
-            print >>stderr, "No coverage module found, skipping code coverage."
+            print("No coverage module found, skipping code coverage.", file=stderr)
             argv.remove('--with-coverage')
         else:
             NOSE_ARGS += COVERAGE_EXTRA_ARGS
@@ -94,5 +94,5 @@ if __name__ == '__main__':
 
 
     finalArgs = NOSE_ARGS + argv
-    print "Running nose with:", " ".join(finalArgs[1:])
+    print("Running nose with:", " ".join(finalArgs[1:]))
     nose.run_exit(argv=finalArgs)

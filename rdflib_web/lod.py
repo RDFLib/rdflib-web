@@ -29,7 +29,7 @@ and servers content-negotiated HTML or serialised RDF from these.
 """
 import re
 import warnings
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import collections
 import subprocess
 import codecs
@@ -145,7 +145,7 @@ def resolve(r):
     if r==None:
         return { 'url': None, 'realurl': None, 'label': None }
     if isinstance(r, rdflib.Literal):
-        return { 'url': None, 'realurl': None, 'label': unicode(r), 'lang': r.language }
+        return { 'url': None, 'realurl': None, 'label': str(r), 'lang': r.language }
 
     # if str(r)=='http://www.agroxml.de/rdf/vocabulary/workProcess#WorkProcess':
     #     asldkj
@@ -171,7 +171,7 @@ def resolve(r):
              'realurl': r,
              'label': get_label(r),
              'type': types,
-             'picked': unicode(r) in session["picked"]}
+             'picked': str(r) in session["picked"]}
 
 def localname(t):
     """standard rdflib qname computer is not quite what we want"""
@@ -183,15 +183,15 @@ def localname(t):
     return r
 
 def _find_label(t, graph, label_props):
-    if isinstance(t, rdflib.Literal): return unicode(t)
+    if isinstance(t, rdflib.Literal): return str(t)
     for l in label_props:
         try:
-            return graph.objects(t,l).next()
+            return next(graph.objects(t,l))
         except StopIteration:
             pass
     try:
         #return g.graph.namespace_manager.compute_qname(t)[2]
-        return urllib2.unquote(localname(t))
+        return urllib.parse.unquote(localname(t))
     except:
         return t
 
@@ -201,7 +201,7 @@ def get_label(r):
         return current_app.config["labels"][r]
     except:
         try:
-            l=urllib2.unquote(localname(r))
+            l=urllib.parse.unquote(localname(r))
         except:
             l=r
         current_app.config["labels"][r]=l
@@ -229,15 +229,15 @@ def _find_types(graph):
 def _reverse_types(types):
     """Generate cache of localname=>type mapping"""
     rtypes={}
-    for t,l in types.iteritems():
+    for t,l in types.items():
         while l in rtypes:
-            warnings.warn(u"Multiple types for label '%s': (%s) rewriting to '%s_'"%(l,rtypes[l], l))
+            warnings.warn("Multiple types for label '%s': (%s) rewriting to '%s_'"%(l,rtypes[l], l))
             l+="_"
         rtypes[l]=t
 
     # rewrite type cache, in case we changed some labels
     types.clear()
-    for l,t in rtypes.iteritems():
+    for l,t in rtypes.items():
         types[t]=l
     return rtypes
 
@@ -265,31 +265,31 @@ def _reverse_resources(resources):
     (for finding resources when entering URL)
     """
     rresources={}
-    for t,res in resources.iteritems():
+    for t,res in resources.items():
         rresources[t]={}
-        for r, l in res.iteritems():
+        for r, l in res.items():
             while l in rresources[t]:
-                warnings.warn(u"Multiple resources for label '%s': (%s, %s) rewriting to '%s_'"%(repr(l),rresources[t][l], r, repr(l+'_')))
+                warnings.warn("Multiple resources for label '%s': (%s, %s) rewriting to '%s_'"%(repr(l),rresources[t][l], r, repr(l+'_')))
                 l+="_"
 
             rresources[t][l]=r
 
         resources[t].clear()
-        for l,r in rresources[t].iteritems():
+        for l,r in rresources[t].items():
             resources[t][r]=l
 
     return rresources
 
 def _find_labels(graph, resources, label_props):
     labels={}
-    for t, res in resources.iteritems():
+    for t, res in resources.items():
         for r in res:
             if r not in labels:
                 labels[r]=_find_label(r, graph, label_props)
     return labels
 
 def _quote(l):
-    if isinstance(l,unicode):
+    if isinstance(l,str):
         l=l.encode("utf-8")
     return l
     #return urllib2.quote(l, safe="")
@@ -415,7 +415,7 @@ def page(label, type_=None):
 
     inprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ])
 
-    picked=unicode(r) in session["picked"]
+    picked=str(r) in session["picked"]
 
     params={ "outprops":outprops,
              "inprops":inprops,
@@ -563,7 +563,7 @@ def search():
     results=[]
     found=set()
 
-    for resource, label in current_app.config["labels"].iteritems():
+    for resource, label in current_app.config["labels"].items():
         r=re.compile("\W%s\W"%re.escape(searchterm), re.I)
         if r.search(label):
             results.append(resolve(resource))
@@ -572,7 +572,7 @@ def search():
 
     results.sort(key=lambda x: x["label"].lower())
 
-    for resource, label in current_app.config["labels"].iteritems():
+    for resource, label in current_app.config["labels"].items():
         if len(results)>offset+10: break
 
         r=re.compile("%s"%re.escape(searchterm), re.I)
@@ -695,7 +695,7 @@ def _main(g, out, opts):
     dbname="commandline DB"
 
     if len(g)==0:
-        import bookdb
+        from . import bookdb
         g=bookdb.bookdb
         dbname='Books DB'
 
