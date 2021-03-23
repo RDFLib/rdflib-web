@@ -33,4 +33,5 @@ setup(
 install_requires = [
     'flask',
     'rdflib>=4.0',
+    'python-mimeparse'
 ]

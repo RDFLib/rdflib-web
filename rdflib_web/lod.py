@@ -413,7 +413,7 @@ def page(label, type_=None):
 
     comments=list(g.graph.objects(r,RDFS.comment))
 
-    inprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ])
+    inprops=[ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ]
 
     picked=str(r) in session["picked"]
 
