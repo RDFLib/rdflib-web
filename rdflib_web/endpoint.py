@@ -67,8 +67,8 @@ def query():
         a=request.headers["Accept"]
 
         format="xml" # xml is default
-        if mimeutils.HTML_MIME in a:
-            format="html"
+        #if mimeutils.HTML_MIME in a:
+        #    format="html"
         if mimeutils.JSON_MIME in a:
             format="json"
 
