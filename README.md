@@ -16,15 +16,10 @@ Documentation on ReadTheDocs: http://rdflib-web.readthedocs.org/en/latest/
 Installation
 ------------
 
-Stable version:
-```bash
-   pip install rdflib-web
-```
-
-or most recent:
+Most recent:
 
 ```bash
-   pip install https://github.com/RDFLib/rdflib-web/archive/master.zip
+   pip3 install https://github.com/RDFLib/rdflib-web/archive/master.zip
 ```
 
 or run dev server in cloned instance:
