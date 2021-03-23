@@ -5,7 +5,7 @@ A tiny test graph with Book meta-data
 import rdflib
 import io
 
-bookrdf="""
+bookrdf=b"""
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix book: <http://example.org/book/> .
@@ -70,4 +70,4 @@ book:author a rdf:Property ;
 """
 
 bookdb=rdflib.Graph()
-bookdb.parse(data=bookrdf,format='n3')
+bookdb.parse(data=bookrdf.decode('utf-8'),format='n3')
