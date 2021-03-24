@@ -4,7 +4,7 @@ human-readable views of resources.
 """
 
 
-__version__ = "0.1"
+__version__ = "0.2"
 
 from . import lod
 from . import bookdb
