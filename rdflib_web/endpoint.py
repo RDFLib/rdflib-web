@@ -148,6 +148,7 @@ def __create_generic_endpoint():
         coin_url=lambda: url_for("graph_store_direct", path=str(rdflib.BNode()), _external=True)
     )
 
+# FIXME: these do not seem to be called with newer flask?
 @endpoint.before_request
 def __start():
     g.start=time.time()

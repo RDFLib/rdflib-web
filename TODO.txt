@@ -1,0 +1,2 @@
+2021-03-24 FIXME: endpoint.{before,after}_request do not seem to be called with newer Flask?
+2021-03-24 FIXME: graph rendering is unavailable. the star-resource picker is also not working (after python3 port)

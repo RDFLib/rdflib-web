@@ -9,17 +9,23 @@ for embedding in your own application.
 
 Documentation on ReadTheDocs: http://rdflib-web.readthedocs.org/en/latest/
 
-.. warning::
-
-   This is a fork with partial Python3 port.
+Status
+------
+See [TODO file](TODO.txt).
 
 Installation
 ------------
 
-Most recent:
-
 ```bash
    pip3 install https://github.com/RDFLib/rdflib-web/archive/master.zip
+```
+
+Running
+-------
+Run after installing with pip:
+
+```bash
+python -m rdflib_web.lod <RDF-file>
 ```
 
 or run dev server in cloned instance:
@@ -30,10 +36,10 @@ FLASK_APP=rdflib_web FLASK_ENV=development flask run
 
 Requirements
 ------------
-FIXME: rdflib and flask where not installed with pip3
+FIXME: rdflib, flask and python-mimeparse where not installed automatically with pip3
 
 These are installed automatically if you install with pip
 
  * For the Web-apps: Flask, http://flask.pocoo.org/
   * (which in turn requires Jinja2 and Werkzeug)
-  * For correct content-negotiation: mimeparse (fallback without conneg)
+  * For correct content-negotiation: python-mimeparse (fallback without conneg)
