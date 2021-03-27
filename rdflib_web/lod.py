@@ -77,7 +77,7 @@ GRAPH_TYPES={"png": "image/png",
 class RDFUrlConverter(BaseConverter):
     def __init__(self, url_map):
         BaseConverter.__init__(self,url_map)
-        self.regex="[^/].*?"
+        self.regex="[^/]*"
     def to_url(self, value):
         return url_quote(value, self.map.charset, safe=":")
 
@@ -291,8 +291,8 @@ def _find_labels(graph, resources, label_props):
 def _quote(l):
     #if isinstance(l,str):
     #    l=l.encode("utf-8")
-    return l
-    #return urllib2.quote(l, safe="")
+    #return l
+    return urllib.parse.quote(l, safe="")
 
 
 def get_resource(label, type_):
