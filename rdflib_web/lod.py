@@ -35,6 +35,8 @@ import subprocess
 import codecs
 import os.path
 import itertools
+import cgi, html
+cgi.escape = html.escape
 
 import rdflib
 
