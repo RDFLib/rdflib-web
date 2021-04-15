@@ -4,8 +4,8 @@ import subprocess
 import threading
 import os
 import re
-import urllib
-import httplib
+import urllib.request, urllib.parse, urllib.error
+import http.client
 import rdflib
 import rdflib.compare
 import rdflib_web.endpoint
@@ -97,7 +97,7 @@ def _test_function_factory(filename):
 def _discover_tests(directory):
     # Name of this function begins with an underscore because
     # otherwise unittest thinks it is a test.
-    tests = filter(lambda name: name.startswith("test_"), os.listdir(directory))
+    tests = [name for name in os.listdir(directory) if name.startswith("test_")]
     def decorator(cls):
         for t in tests:
             test_function = _test_function_factory("%s/%s" % (directory, t))
@@ -126,7 +126,7 @@ class TestEndpointProtocol(unittest.TestCase):
         t.start()
         import time
         time.sleep(1)
-        cls.connection = httplib.HTTPConnection(cls.host, cls.port, timeout=5)
+        cls.connection = http.client.HTTPConnection(cls.host, cls.port, timeout=5)
 
     def replace_constants(self, s):
         s = s.replace('$GRAPHSTORE$', self.graphstore_path)
@@ -166,7 +166,7 @@ class TestEndpointProtocol(unittest.TestCase):
 
     def compareHeaders(self, expected, received):
         result = []
-        for k, v in expected.items():
+        for k, v in list(expected.items()):
             if not k in received:
                 result.append("Header {} not present in response".format(k))
             else:

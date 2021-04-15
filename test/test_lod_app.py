@@ -1,6 +1,6 @@
 import threading
 import time
-from httplib import HTTPConnection
+from http.client import HTTPConnection
 
 import rdflib
 import rdflib_web.lod as lod

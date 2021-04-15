@@ -1,0 +1,5 @@
+2021-03-24 FIXME: the star-resource picker is not working (after python3 port)
+2021-03-24 FIXME: rdflib, flask and python-mimeparse where not installed automatically with pip3
+2021-04-15 TODO: review <setup.old> (Py2.7 setup.py) and remove
+
+# ex:ft=todo.txt:

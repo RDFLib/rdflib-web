@@ -1,4 +1,3 @@
-
 rdflib-web
 ==========
 Two RDFLib web-apps on top of the Flask web-microframework:
@@ -13,22 +12,33 @@ Documentation on ReadTheDocs: http://rdflib-web.readthedocs.org/en/latest/
 Installation
 ------------
 
-Stable version:
 ```bash
-   pip install rdflib-web
+   pip3 install https://github.com/RDFLib/rdflib-web/archive/master.zip
 ```
 
-or most recent:
+Running
+-------
+Run after installing with pip:
 
 ```bash
-   pip install https://github.com/RDFLib/rdflib-web/archive/master.zip
+rdflodapp <RDF-file>
+rdfsparqlapp <RDF-file>
+```
+
+or run dev server in cloned instance:
+
+```bash
+FLASK_APP=rdflib_web FLASK_ENV=development flask run
 ```
 
 Requirements
 ------------
-
 These are installed automatically if you install with pip
 
  * For the Web-apps: Flask, http://flask.pocoo.org/
   * (which in turn requires Jinja2 and Werkzeug)
-  * For correct content-negotiation: mimeparse (fallback without conneg)
+  * For correct content-negotiation: python-mimeparse (fallback without conneg)
+
+Status
+------
+See [TODO file](TODO.txt).

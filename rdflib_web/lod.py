@@ -29,12 +29,14 @@ and servers content-negotiated HTML or serialised RDF from these.
 """
 import re
 import warnings
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import collections
 import subprocess
 import codecs
 import os.path
 import itertools
+import cgi, html
+cgi.escape = html.escape
 
 import rdflib
 
@@ -51,7 +53,7 @@ from werkzeug.urls import url_quote
 
 from jinja2 import contextfilter, Markup
 
-from rdflib_web.endpoint import endpoint
+from rdflib_web.endpoint import endpoint, __start, __end
 from rdflib_web import mimeutils
 
 from rdflib_web.caches import lfu_cache
@@ -77,7 +79,7 @@ GRAPH_TYPES={"png": "image/png",
 class RDFUrlConverter(BaseConverter):
     def __init__(self, url_map):
         BaseConverter.__init__(self,url_map)
-        self.regex="[^/].*?"
+        self.regex="[^/]*"
     def to_url(self, value):
         return url_quote(value, self.map.charset, safe=":")
 
@@ -145,7 +147,7 @@ def resolve(r):
     if r==None:
         return { 'url': None, 'realurl': None, 'label': None }
     if isinstance(r, rdflib.Literal):
-        return { 'url': None, 'realurl': None, 'label': unicode(r), 'lang': r.language }
+        return { 'url': None, 'realurl': None, 'label': str(r), 'lang': r.language }
 
     # if str(r)=='http://www.agroxml.de/rdf/vocabulary/workProcess#WorkProcess':
     #     asldkj
@@ -159,7 +161,7 @@ def resolve(r):
         for t in current_app.config["resource_types"][r]:
             if t in current_app.config["types"]:
                 try:
-                    l=current_app.config["resources"][t][r].decode("utf8")
+                    l=current_app.config["resources"][t][r]
                     localurl=url_for("lod.resource", type_=current_app.config["types"][t], label=l)
                     break
                 except KeyError: pass
@@ -171,7 +173,7 @@ def resolve(r):
              'realurl': r,
              'label': get_label(r),
              'type': types,
-             'picked': unicode(r) in session["picked"]}
+             'picked': str(r) in session["picked"]}
 
 def localname(t):
     """standard rdflib qname computer is not quite what we want"""
@@ -183,15 +185,15 @@ def localname(t):
     return r
 
 def _find_label(t, graph, label_props):
-    if isinstance(t, rdflib.Literal): return unicode(t)
+    if isinstance(t, rdflib.Literal): return str(t)
     for l in label_props:
         try:
-            return graph.objects(t,l).next()
+            return next(graph.objects(t,l))
         except StopIteration:
             pass
     try:
         #return g.graph.namespace_manager.compute_qname(t)[2]
-        return urllib2.unquote(localname(t))
+        return urllib.parse.unquote(localname(t))
     except:
         return t
 
@@ -201,7 +203,7 @@ def get_label(r):
         return current_app.config["labels"][r]
     except:
         try:
-            l=urllib2.unquote(localname(r))
+            l=urllib.parse.unquote(localname(r))
         except:
             l=r
         current_app.config["labels"][r]=l
@@ -229,15 +231,15 @@ def _find_types(graph):
 def _reverse_types(types):
     """Generate cache of localname=>type mapping"""
     rtypes={}
-    for t,l in types.iteritems():
+    for t,l in types.items():
         while l in rtypes:
-            warnings.warn(u"Multiple types for label '%s': (%s) rewriting to '%s_'"%(l,rtypes[l], l))
+            warnings.warn("Multiple types for label '%s': (%s) rewriting to '%s_'"%(l,rtypes[l], l))
             l+="_"
         rtypes[l]=t
 
     # rewrite type cache, in case we changed some labels
     types.clear()
-    for l,t in rtypes.iteritems():
+    for l,t in rtypes.items():
         types[t]=l
     return rtypes
 
@@ -265,34 +267,34 @@ def _reverse_resources(resources):
     (for finding resources when entering URL)
     """
     rresources={}
-    for t,res in resources.iteritems():
+    for t,res in resources.items():
         rresources[t]={}
-        for r, l in res.iteritems():
+        for r, l in res.items():
             while l in rresources[t]:
-                warnings.warn(u"Multiple resources for label '%s': (%s, %s) rewriting to '%s_'"%(repr(l),rresources[t][l], r, repr(l+'_')))
+                warnings.warn("Multiple resources for label '%s': (%s, %s) rewriting to '%s_'"%(repr(l),rresources[t][l], r, repr(l+'_')))
                 l+="_"
 
             rresources[t][l]=r
 
         resources[t].clear()
-        for l,r in rresources[t].iteritems():
+        for l,r in rresources[t].items():
             resources[t][r]=l
 
     return rresources
 
 def _find_labels(graph, resources, label_props):
     labels={}
-    for t, res in resources.iteritems():
+    for t, res in resources.items():
         for r in res:
             if r not in labels:
                 labels[r]=_find_label(r, graph, label_props)
     return labels
 
 def _quote(l):
-    if isinstance(l,unicode):
-        l=l.encode("utf-8")
-    return l
-    #return urllib2.quote(l, safe="")
+    #if isinstance(l,str):
+    #    l=l.encode("utf-8")
+    #return l
+    return urllib.parse.quote(l, safe="")
 
 
 def get_resource(label, type_):
@@ -407,15 +409,15 @@ def page(label, type_=None):
                    RDFS.domain, RDFS.range,
                    RDFS.subClassOf, RDFS.subPropertyOf)
 
-    outprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props])
+    outprops=[ (resolve(x[0]), resolve(x[1])) for x in g.graph.predicate_objects(r) if x[0] not in special_props]
 
     types=sorted([ resolve(x) for x in current_app.config["resource_types"][r]], key=lambda x: x['label'].lower())
 
     comments=list(g.graph.objects(r,RDFS.comment))
 
-    inprops=sorted([ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ])
+    inprops=[ (resolve(x[0]), resolve(x[1])) for x in g.graph.subject_predicates(r) ]
 
-    picked=unicode(r) in session["picked"]
+    picked=str(r) in session["picked"]
 
     params={ "outprops":outprops,
              "inprops":inprops,
@@ -563,7 +565,7 @@ def search():
     results=[]
     found=set()
 
-    for resource, label in current_app.config["labels"].iteritems():
+    for resource, label in current_app.config["labels"].items():
         r=re.compile("\W%s\W"%re.escape(searchterm), re.I)
         if r.search(label):
             results.append(resolve(resource))
@@ -572,7 +574,7 @@ def search():
 
     results.sort(key=lambda x: x["label"].lower())
 
-    for resource, label in current_app.config["labels"].iteritems():
+    for resource, label in current_app.config["labels"].items():
         if len(results)>offset+10: break
 
         r=re.compile("%s"%re.escape(searchterm), re.I)
@@ -678,6 +680,10 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
     app.register_blueprint(endpoint)
     app.register_blueprint(lod)
 
+    app.before_request(setupSession)
+    app.before_request(__start)
+    app.after_request(__end)
+
     app.add_url_rule('/', 'index', index)
 
     # make sure we get one session per app
@@ -695,7 +701,7 @@ def _main(g, out, opts):
     dbname="commandline DB"
 
     if len(g)==0:
-        import bookdb
+        from . import bookdb
         g=bookdb.bookdb
         dbname='Books DB'
 

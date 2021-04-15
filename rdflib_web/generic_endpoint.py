@@ -36,7 +36,7 @@ class GenericEndpoint:
         if resulttype == self.RESULT_GRAPH:
             available = ['application/n-triples', 'text/n3', 'text/turtle', 'application/rdf+xml']
         assert available, "Invalid resulttype"
-        import mimeutils
+        from . import mimeutils
         best = mimeutils.best_match(available, accept_header) or available[-1]
         return best, best
 

@@ -35,7 +35,7 @@ import sys
 import time
 import traceback
 
-import mimeutils
+from . import mimeutils
 
 from rdflib_web import htmlresults
 from rdflib_web import __version__
@@ -88,7 +88,7 @@ def query():
 
         results=g.generic.ds.query(q).serialize(format=format)
         if format=='html':
-            response=make_response(render_template("results.html", results=Markup(unicode(results,"utf-8")), q=q))
+            response=make_response(render_template("results.html", results=Markup(str(results,"utf-8")), q=q))
         else:
             response=make_response(results)
 
@@ -104,7 +104,7 @@ def graph_store_do(graph_identifier):
     if mimetype == "multipart/form-data":
         body = []
         force_mimetype = args.get('mimetype')
-        for _, data_file in request.files.items():
+        for _, data_file in list(request.files.items()):
             data = data_file.read()
             mt = force_mimetype or data_file.mimetype or rdflib.guess_format(data_file.filename)
             body.append({'data': data, 'mimetype': mt})
@@ -119,7 +119,7 @@ def graph_store_do(graph_identifier):
     code, headers, body = result
 
     response = make_response(body or '', code)
-    for k, v in headers.items():
+    for k, v in list(headers.items()):
         response.headers[k] = v
     return response
 
@@ -148,6 +148,7 @@ def __create_generic_endpoint():
         coin_url=lambda: url_for("graph_store_direct", path=str(rdflib.BNode()), _external=True)
     )
 
+# FIXME: these do not seem to be called with newer flask?
 @endpoint.before_request
 def __start():
     g.start=time.time()
@@ -156,7 +157,7 @@ def __start():
 def __end(response):
     diff = time.time() - g.start
     if response.response and response.content_type.startswith("text/html") and response.status_code==200:
-        response.response[0]=response.response[0].replace('__EXECUTION_TIME__', "%.3f"%diff)
+        response.response[0]=response.response[0].replace(b'__EXECUTION_TIME__', b"%.3f"%diff)
         response.headers["Content-Length"]=len(response.response[0])
     return response
 
@@ -193,7 +194,7 @@ def _main(g, out, opts):
     import sys
 
     if 'x' in opts:
-        import bookdb
+        from . import bookdb
         g=bookdb.bookdb
 
     serve(g, True)
