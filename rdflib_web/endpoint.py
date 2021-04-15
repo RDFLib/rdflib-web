@@ -157,7 +157,7 @@ def __start():
 def __end(response):
     diff = time.time() - g.start
     if response.response and response.content_type.startswith("text/html") and response.status_code==200:
-        response.response[0]=response.response[0].replace('__EXECUTION_TIME__', "%.3f"%diff)
+        response.response[0]=response.response[0].replace(b'__EXECUTION_TIME__', b"%.3f"%diff)
         response.headers["Content-Length"]=len(response.response[0])
     return response
 

@@ -1,4 +1,3 @@
-2021-03-24 FIXME: endpoint.{before,after}_request do not seem to be called with newer Flask?
 2021-03-24 FIXME: the star-resource picker is not working (after python3 port)
 2021-03-24 FIXME: looks like the HTMLResultSerializer plugin is bundled with this project, see why this is not picked up by rdflib
 # ex:ft=todo.txt:

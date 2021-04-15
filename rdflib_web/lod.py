@@ -53,7 +53,7 @@ from werkzeug.urls import url_quote
 
 from jinja2 import contextfilter, Markup
 
-from rdflib_web.endpoint import endpoint
+from rdflib_web.endpoint import endpoint, __start, __end
 from rdflib_web import mimeutils
 
 from rdflib_web.caches import lfu_cache
@@ -679,6 +679,10 @@ def get(graph, types='auto',image_patterns=["\.[png|jpg|gif]$"],
 
     app.register_blueprint(endpoint)
     app.register_blueprint(lod)
+
+    app.before_request(setupSession)
+    app.before_request(__start)
+    app.after_request(__end)
 
     app.add_url_rule('/', 'index', index)
 
