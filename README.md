@@ -1,3 +1,4 @@
+## ARCHIVED: this repo is now archived due to inactivity
 
 rdflib-web
 ==========
